@@ -1,11 +1,10 @@
 use std::{env, thread::sleep, time::Duration};
 
-use mcp_client::stdio::{
-    JsonRpcMessage, StdioClientTransport, StdioClientTransportError, StdioServerParameters,
-    StdioStream, Transport,
+use mcp_client::{
+    client::{Client, ClientError, ClientOptions},
+    stdio::{StdioClientTransport, StdioClientTransportError, StdioServerParameters, StdioStream},
 };
-use mcp_core::{CoreConfig, Message, RequestMessage, Role};
-use serde_json::json;
+use mcp_core::{CoreConfig, Role};
 
 fn main() {
     if let Err(error) = run() {
@@ -14,41 +13,24 @@ fn main() {
     }
 }
 
-fn run() -> Result<(), StdioClientTransportError> {
+fn run() -> Result<(), ClientError<StdioClientTransportError>> {
     let config = CoreConfig::dev("mcp-client");
     announce_role(Role::Client, &config);
 
     let (command, args) = resolve_server_command();
-    let mut transport = StdioClientTransport::new(
+    let transport = StdioClientTransport::new(
         StdioServerParameters::new(command)
             .args(args)
             .stderr(StdioStream::Inherit),
     );
 
-    transport
-        .on_message(|message| println!("stdio message: {:?}", message))
-        .on_error(|error| eprintln!("stdio transport error: {error}"))
-        .on_close(|| println!("stdio transport closed"));
+    let mut client = Client::new(
+        transport,
+        ClientOptions::new(&config.service_name).with_version("0.1.0"),
+    );
 
-    let transport_iface: &mut dyn Transport<Message = JsonRpcMessage, Error = StdioClientTransportError> =
-        &mut transport;
-
-    transport_iface.start()?;
-
-    let handshake = create_request(&config);
-    println!("Sending: {}", handshake.summary());
-
-    let request = JsonRpcMessage::Request(RequestMessage::new(
-        "client-handshake",
-        "mcp-server",
-        json!({
-            "sender": handshake.sender,
-            "recipient": handshake.recipient,
-            "body": handshake.body
-        }),
-    ));
-
-    transport_iface.send(&request)?;
+    client.start()?;
+    client.handshake()?;
 
     println!(
         "Client expects handshake on port {} and will reuse {:?}.",
@@ -56,7 +38,7 @@ fn run() -> Result<(), StdioClientTransportError> {
     );
 
     sleep(Duration::from_secs(1));
-    transport_iface.close()?;
+    client.close()?;
     Ok(())
 }
 
@@ -66,15 +48,6 @@ fn announce_role(role: Role, config: &CoreConfig) {
         config.service_name, config.environment, role
     );
 }
-
-fn create_request(config: &CoreConfig) -> Message {
-    Message::new(
-        &config.service_name,
-        "mcp-server",
-        "greetings from the client mesh peer",
-    )
-}
-
 #[cfg(target_os = "windows")]
 const DEFAULT_SERVER_COMMAND: &str = "powershell";
 
