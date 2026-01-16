@@ -1,0 +1,10 @@
+[package]
+name = "mcp_client"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+mcp_core = { path = "../core" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
