@@ -29,8 +29,7 @@ fn run() -> Result<(), ClientError<StdioClientTransportError>> {
         ClientOptions::new(&config.service_name).with_version("0.1.0"),
     );
 
-    client.start()?;
-    client.handshake()?;
+    client.connect()?;
 
     println!(
         "Client expects handshake on port {} and will reuse {:?}.",

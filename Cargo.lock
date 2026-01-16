@@ -595,6 +595,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "mcp_examples"
+version = "0.1.0"
+dependencies = [
+ "mcp_client",
+ "mcp_core",
+ "serde_json",
+]
+
+[[package]]
 name = "mcp_server"
 version = "0.1.0"
 dependencies = [
