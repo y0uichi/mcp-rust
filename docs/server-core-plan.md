@@ -11,6 +11,12 @@
 - 在 `mcp_server` 中提供与 TS `Server`/`McpServer` 等价的两层 API：底层可自定义 handler，高层提供 tools/resources/prompts 的注册与默认 handler。
 - 保持 Rust 代码“一个类型一个文件”的组织方式，并将测试文件独立放置。
 
+## 当前拆分与类型补齐状态
+- `core/types` 已补齐 JSON-RPC 常量、meta/分页/initialize/logging/progress/tasks/tools/resources/prompts 与基础 content block；Task 字段已对齐。
+- `core/protocol` 已支持 request/notification handler、超时/取消选项、能力校验接口与 task store 骨架。
+- `server` 已拆分出 `Server`/`McpServer` 与 registries，并提供默认 handler、listChanged 通知与内存 TaskStore。
+- 仍缺：sampling/elicitation/completions/roots 等高阶类型与相关 handler 校验逻辑（后续补齐）。
+
 ## 分层设计
 1) **core（mcp_core）**
 - `Protocol`：负责 JSON-RPC 包装、能力检查、任务扩展、超时/取消、请求/通知路由。

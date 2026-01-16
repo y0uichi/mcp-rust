@@ -8,13 +8,23 @@ pub mod schema;
 pub mod stdio;
 pub mod types;
 
-pub use crate::protocol::{Protocol, ProtocolError, RequestHandler};
+pub use crate::protocol::{
+    CancellationToken, CapabilityChecker, NotificationContext, NotificationHandler, Protocol,
+    ProtocolError, ProtocolOptions, RequestContext, RequestHandler, RequestOptions, TaskStore,
+};
 pub use crate::schema::{JsonSchemaValidator, SchemaValidator, ValidationError};
 pub use crate::stdio::{
     JsonRpcMessage, ReadBuffer, ReadBufferError, deserialize_message, serialize_message,
 };
 pub use crate::types::{
-    ErrorObject, Message, MessageId, NotificationMessage, RequestMessage, ResultMessage,
+    CapabilityFlag, ClientCapabilities, ClientTasksCapability, ClientTasksElicitationCapabilities,
+    ClientTasksRequestCapabilities, ClientTasksSamplingCapabilities, ElicitationCapability,
+    ErrorCode, ErrorObject, FormElicitationCapability, Message, MessageId, NotificationMessage,
+    PromptCapabilities, RelatedTaskMetadata, RequestMessage, ResourceCapabilities, ResultMessage,
+    RootsCapabilities, SamplingCapabilities, ServerCapabilities, ServerTasksCapability,
+    ServerTasksRequestCapabilities, ServerTasksToolCapabilities, Task, TaskCreationParams,
+    TaskMetadata, TaskStatus, ToolCapabilities, DEFAULT_NEGOTIATED_PROTOCOL_VERSION,
+    LATEST_PROTOCOL_VERSION, SUPPORTED_PROTOCOL_VERSIONS,
 };
 
 /// Roles that participants in the mesh can take.
@@ -64,5 +74,8 @@ pub mod prelude {
     pub use super::{CoreConfig as Config, Environment};
     pub use super::{JsonSchemaValidator, SchemaValidator};
     pub use super::{Message, NotificationMessage, RequestMessage, ResultMessage, Role};
-    pub use super::{Protocol, ProtocolError, RequestHandler};
+    pub use super::{
+        CancellationToken, NotificationHandler, Protocol, ProtocolError, ProtocolOptions,
+        RequestContext, RequestHandler, RequestOptions,
+    };
 }
