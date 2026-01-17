@@ -10,13 +10,13 @@ use mcp_client::stdio::{
 use mcp_core::{CoreConfig, MessageId, NotificationMessage, RequestMessage, ResultMessage, Role};
 use serde_json::{Value, json};
 
-const FILESYSTEM_DEFAULT_COMMAND: &str = "npx";
-const FILESYSTEM_DEFAULT_ARGS: &[&str] = &["-y", "@modelcontextprotocol/server-filesystem"];
+const FILESYSTEM_DEFAULT_COMMAND: &str = "cargo";
+const FILESYSTEM_DEFAULT_ARGS: &[&str] = &["run", "-p", "mcp-filesystem-server", "--quiet"];
 const INITIALIZE_REQUEST_ID: &str = "client-initialize";
 const TOOL_LIST_REQUEST_ID: &str = "client-tools-list";
 const CALL_TOOL_REQUEST_ID: &str = "client-call-tool";
 const LATEST_PROTOCOL_VERSION: &str = "2025-11-25";
-const LIST_ALLOWED_DIRECTORIES_TOOL: &str = "list_allowed_directories";
+const LIST_DIRECTORY_TOOL: &str = "list_directory";
 
 fn main() {
     if let Err(error) = run() {
@@ -84,12 +84,18 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             "Tools list response: {}",
             tools_result.result.as_ref().unwrap_or(&json!({}))
         );
-        if tool_is_available(&tools_result, LIST_ALLOWED_DIRECTORIES_TOOL) {
+        if tool_is_available(&tools_result, LIST_DIRECTORY_TOOL) {
+            // Use the first root directory for testing
+            let test_path = roots
+                .first()
+                .and_then(|r| r.get("uri"))
+                .and_then(|u| u.as_str())
+                .unwrap_or("file:///tmp");
             send_request(
                 &mut transport,
                 CALL_TOOL_REQUEST_ID,
                 "tools/call",
-                json!({ "name": LIST_ALLOWED_DIRECTORIES_TOOL, "arguments": {} }),
+                json!({ "name": LIST_DIRECTORY_TOOL, "arguments": { "path": test_path } }),
             )?;
 
             if let Some(call_result) = wait_for_result(
@@ -105,7 +111,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 );
             }
         } else {
-            println!("Tool `{LIST_ALLOWED_DIRECTORIES_TOOL}` not advertised by server");
+            println!("Tool `{LIST_DIRECTORY_TOOL}` not advertised by server");
         }
     }
 

@@ -4,5 +4,6 @@ members = [
     "core",
     "server",
     "client",
-    "examples",
+    "examples/mcp-filesystem-client",
+    "examples/mcp-filesystem-server",
 ]

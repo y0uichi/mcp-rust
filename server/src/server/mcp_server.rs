@@ -124,6 +124,15 @@ impl McpServer {
         self.server.prompt_list_changed_notification()
     }
 
+    /// Add a resource to the registry after initialization without modifying capabilities.
+    /// This is useful when resources are discovered dynamically after the client has initialized.
+    pub fn add_resource_after_init(&self, resource: mcp_core::types::Resource, handler: impl ResourceHandler) {
+        self.resources
+            .lock()
+            .expect("resource registry")
+            .register_resource(resource, handler);
+    }
+
     fn ensure_tool_handlers(&mut self) -> Result<(), ServerError> {
         if self.tool_handlers_initialized {
             return Ok(());
