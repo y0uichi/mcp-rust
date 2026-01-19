@@ -6,6 +6,14 @@
 
 ### 新增
 
+- **Sampling/Elicitation** (2026-01-19)
+  - `sampling/createMessage` 服务端请求客户端 LLM 采样
+  - `elicitation/create` 表单/URL 模式用户输入收集
+  - 完整类型定义：`CreateMessageRequestParams`、`CreateMessageResult`、`ElicitRequestParams`、`ElicitResult` 等
+  - 服务端方法：`create_message_request`、`elicit_form_request`、`elicit_url_request`
+  - 客户端处理器：`SamplingHandler`、`FormElicitationHandler`、`UrlElicitationHandler`
+  - 客户端能力检查：`client_supports_sampling`、`client_supports_form_elicitation`、`client_supports_url_elicitation`
+
 - **OAuth/DNS 保护** (2026-01-19)
   - DNS 重绑定保护中间件（`DnsProtectionLayer`、`host_header_validation`）
   - OAuth 2.1 核心类型定义（`OAuthMetadata`、`OAuthTokens` 等）
@@ -77,5 +85,4 @@
 详见 [状态总览](./status.md) 了解与 TypeScript SDK 的功能对比。
 
 主要未实现的功能：
-- Sampling/Elicitation
 - Completions

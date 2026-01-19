@@ -8,6 +8,9 @@ pub enum ServerError {
     #[error("capabilities are locked after initialization")]
     CapabilitiesLocked,
 
+    #[error("capability not available: {0}")]
+    Capability(String),
+
     #[error("protocol error: {0}")]
     Protocol(#[from] ProtocolError),
 

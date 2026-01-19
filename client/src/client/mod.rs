@@ -6,6 +6,7 @@ mod client_options;
 mod client_tasks_capability;
 mod elicitation_capability;
 mod elicitation_form_capability;
+mod elicitation_handler;
 mod implementation;
 mod initialize_result;
 mod json_schema_validator;
@@ -22,6 +23,7 @@ mod resource_definition;
 mod resource_list_result;
 mod response_message;
 mod roots_capability;
+mod sampling_handler;
 mod server_capabilities;
 mod task_get_result;
 mod task_info;
@@ -42,6 +44,11 @@ pub use client_options::ClientOptions;
 pub use client_tasks_capability::ClientTasksCapability;
 pub use elicitation_capability::ElicitationCapability;
 pub use elicitation_form_capability::ElicitationFormCapability;
+pub use elicitation_handler::{
+    BoxedFormElicitationHandler, BoxedUrlElicitationHandler, ElicitationError,
+    FormElicitationHandler, FormElicitationHandlerFn, UrlElicitationHandler,
+    UrlElicitationHandlerFn,
+};
 pub use implementation::Implementation;
 pub use initialize_result::InitializeResult;
 pub use json_schema_validator::JsonSchemaValidator;
@@ -59,6 +66,9 @@ pub use resource_definition::ResourceDefinition;
 pub use resource_list_result::ResourceListResult;
 pub use response_message::ResponseMessage;
 pub use roots_capability::RootsCapability;
+pub use sampling_handler::{
+    BoxedSamplingHandler, SamplingError, SamplingHandler, SamplingHandlerFn,
+};
 pub use server_capabilities::ServerCapabilities;
 pub use task_get_result::TaskGetResult;
 pub use task_info::TaskInfo;

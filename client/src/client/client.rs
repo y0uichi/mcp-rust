@@ -10,12 +10,14 @@ use mcp_core::{
     protocol::Protocol,
     stdio::JsonRpcMessage,
     types::{
-        ErrorCode, ErrorObject, ListRootsResult, MessageId, NotificationMessage, RequestMessage,
-        ResultMessage,
+        CreateMessageRequestParams, ElicitRequestFormParams, ElicitRequestUrlParams,
+        ElicitationMode, ErrorCode, ErrorObject, ListRootsResult, MessageId, NotificationMessage,
+        RequestMessage, ResultMessage,
     },
 };
 
 use crate::client::{
+    BoxedFormElicitationHandler, BoxedSamplingHandler, BoxedUrlElicitationHandler,
     ClientCapabilities, ClientError, ClientOptions, Implementation, InitializeResult,
     JsonSchemaValidator, ListChangedHandlers, ListChangedKind, NoopJsonSchemaValidator,
     PromptListResult, RequestStream, ResourceListResult, ResponseMessage, ServerCapabilities,
@@ -49,6 +51,10 @@ where
     pending_streams: HashMap<MessageId, Sender<ResponseMessage>>,
     next_id: i64,
     connected: bool,
+    // Sampling/Elicitation handlers
+    sampling_handler: Option<BoxedSamplingHandler>,
+    form_elicitation_handler: Option<BoxedFormElicitationHandler>,
+    url_elicitation_handler: Option<BoxedUrlElicitationHandler>,
 }
 
 impl<T> Client<T>
@@ -88,6 +94,9 @@ where
             pending_streams: HashMap::new(),
             next_id: 1,
             connected: false,
+            sampling_handler: None,
+            form_elicitation_handler: None,
+            url_elicitation_handler: None,
         }
     }
 
@@ -106,6 +115,12 @@ where
                     .send(&JsonRpcMessage::Result(response))
                     .map_err(ClientError::Transport)?;
             }
+            "sampling/createMessage" => {
+                return self.handle_sampling_request(request);
+            }
+            "elicitation/create" => {
+                return self.handle_elicitation_request(request);
+            }
             _ => {
                 let error = ErrorObject::new(
                     ErrorCode::MethodNotFound as i32,
@@ -121,6 +136,191 @@ where
         Ok(())
     }
 
+    fn handle_sampling_request(
+        &mut self,
+        request: RequestMessage,
+    ) -> Result<(), ClientError<T::Error>> {
+        // Check if sampling is supported
+        if self.capabilities.sampling.is_none() {
+            let error = ErrorObject::new(
+                ErrorCode::InvalidRequest as i32,
+                "client does not support sampling capability",
+                None,
+            );
+            let response = ResultMessage::failure(request.id.clone(), error);
+            self.transport
+                .send(&JsonRpcMessage::Result(response))
+                .map_err(ClientError::Transport)?;
+            return Ok(());
+        }
+
+        // Check if handler is registered
+        let handler = match &self.sampling_handler {
+            Some(h) => h.clone(),
+            None => {
+                let error = ErrorObject::new(
+                    ErrorCode::InternalError as i32,
+                    "no sampling handler registered",
+                    None,
+                );
+                let response = ResultMessage::failure(request.id.clone(), error);
+                self.transport
+                    .send(&JsonRpcMessage::Result(response))
+                    .map_err(ClientError::Transport)?;
+                return Ok(());
+            }
+        };
+
+        // Parse the request params
+        let params: CreateMessageRequestParams =
+            serde_json::from_value(request.params.clone()).map_err(|e| {
+                ClientError::Serialization(e)
+            })?;
+
+        // Execute handler synchronously
+        let result = handler.handle(params);
+
+        let response = match result {
+            Ok(result) => {
+                let payload = serde_json::to_value(result).map_err(ClientError::Serialization)?;
+                ResultMessage::success(request.id.clone(), payload)
+            }
+            Err(err) => {
+                let error = ErrorObject::new(
+                    ErrorCode::InternalError as i32,
+                    err.0,
+                    None,
+                );
+                ResultMessage::failure(request.id.clone(), error)
+            }
+        };
+
+        self.transport
+            .send(&JsonRpcMessage::Result(response))
+            .map_err(ClientError::Transport)?;
+        Ok(())
+    }
+
+    fn handle_elicitation_request(
+        &mut self,
+        request: RequestMessage,
+    ) -> Result<(), ClientError<T::Error>> {
+        // Check if elicitation is supported
+        if self.capabilities.elicitation.is_none() {
+            let error = ErrorObject::new(
+                ErrorCode::InvalidRequest as i32,
+                "client does not support elicitation capability",
+                None,
+            );
+            let response = ResultMessage::failure(request.id.clone(), error);
+            self.transport
+                .send(&JsonRpcMessage::Result(response))
+                .map_err(ClientError::Transport)?;
+            return Ok(());
+        }
+
+        // Determine the mode from the request
+        let mode = request
+            .params
+            .get("mode")
+            .and_then(|v| v.as_str())
+            .map(|s| {
+                if s == "url" {
+                    ElicitationMode::Url
+                } else {
+                    ElicitationMode::Form
+                }
+            })
+            .unwrap_or(ElicitationMode::Form);
+
+        match mode {
+            ElicitationMode::Form => {
+                let handler = match &self.form_elicitation_handler {
+                    Some(h) => h.clone(),
+                    None => {
+                        let error = ErrorObject::new(
+                            ErrorCode::InternalError as i32,
+                            "no form elicitation handler registered",
+                            None,
+                        );
+                        let response = ResultMessage::failure(request.id.clone(), error);
+                        self.transport
+                            .send(&JsonRpcMessage::Result(response))
+                            .map_err(ClientError::Transport)?;
+                        return Ok(());
+                    }
+                };
+
+                let params: ElicitRequestFormParams =
+                    serde_json::from_value(request.params.clone()).map_err(ClientError::Serialization)?;
+
+                let result = handler.handle(params);
+
+                let response = match result {
+                    Ok(result) => {
+                        let payload = serde_json::to_value(result).map_err(ClientError::Serialization)?;
+                        ResultMessage::success(request.id.clone(), payload)
+                    }
+                    Err(err) => {
+                        let error = ErrorObject::new(
+                            ErrorCode::InternalError as i32,
+                            err.0,
+                            None,
+                        );
+                        ResultMessage::failure(request.id.clone(), error)
+                    }
+                };
+
+                self.transport
+                    .send(&JsonRpcMessage::Result(response))
+                    .map_err(ClientError::Transport)?;
+            }
+            ElicitationMode::Url => {
+                let handler = match &self.url_elicitation_handler {
+                    Some(h) => h.clone(),
+                    None => {
+                        let error = ErrorObject::new(
+                            ErrorCode::InternalError as i32,
+                            "no URL elicitation handler registered",
+                            None,
+                        );
+                        let response = ResultMessage::failure(request.id.clone(), error);
+                        self.transport
+                            .send(&JsonRpcMessage::Result(response))
+                            .map_err(ClientError::Transport)?;
+                        return Ok(());
+                    }
+                };
+
+                let params: ElicitRequestUrlParams =
+                    serde_json::from_value(request.params.clone()).map_err(ClientError::Serialization)?;
+
+                let result = handler.handle(params);
+
+                let response = match result {
+                    Ok(result) => {
+                        let payload = serde_json::to_value(result).map_err(ClientError::Serialization)?;
+                        ResultMessage::success(request.id.clone(), payload)
+                    }
+                    Err(err) => {
+                        let error = ErrorObject::new(
+                            ErrorCode::InternalError as i32,
+                            err.0,
+                            None,
+                        );
+                        ResultMessage::failure(request.id.clone(), error)
+                    }
+                };
+
+                self.transport
+                    .send(&JsonRpcMessage::Result(response))
+                    .map_err(ClientError::Transport)?;
+            }
+        }
+
+        Ok(())
+    }
+
     /// Register client capabilities before connecting.
     pub fn register_capabilities(
         &mut self,
@@ -133,6 +333,33 @@ where
         }
         self.capabilities = self.capabilities.merge(&capabilities);
         Ok(())
+    }
+
+    /// Set the handler for sampling/createMessage requests from the server.
+    /// This should be called before connecting if sampling capability is declared.
+    pub fn set_sampling_handler<H>(&mut self, handler: H)
+    where
+        H: crate::client::SamplingHandler,
+    {
+        self.sampling_handler = Some(Arc::new(handler));
+    }
+
+    /// Set the handler for form-based elicitation/create requests from the server.
+    /// This should be called before connecting if form elicitation capability is declared.
+    pub fn set_form_elicitation_handler<H>(&mut self, handler: H)
+    where
+        H: crate::client::FormElicitationHandler,
+    {
+        self.form_elicitation_handler = Some(Arc::new(handler));
+    }
+
+    /// Set the handler for URL-based elicitation/create requests from the server.
+    /// This should be called before connecting if URL elicitation capability is declared.
+    pub fn set_url_elicitation_handler<H>(&mut self, handler: H)
+    where
+        H: crate::client::UrlElicitationHandler,
+    {
+        self.url_elicitation_handler = Some(Arc::new(handler));
     }
 
     /// Connect to the transport and send an initialize request.

@@ -19,14 +19,26 @@ pub use crate::stdio::{
     JsonRpcMessage, ReadBuffer, ReadBufferError, deserialize_message, serialize_message,
 };
 pub use crate::types::{
+    // Capabilities
     CapabilityFlag, ClientCapabilities, ClientTasksCapability, ClientTasksElicitationCapabilities,
-    ClientTasksRequestCapabilities, ClientTasksSamplingCapabilities,
-    DEFAULT_NEGOTIATED_PROTOCOL_VERSION, ElicitationCapability, ErrorCode, ErrorObject,
-    FormElicitationCapability, LATEST_PROTOCOL_VERSION, Message, MessageId, NotificationMessage,
-    PromptCapabilities, RelatedTaskMetadata, RequestMessage, ResourceCapabilities, ResultMessage,
-    RootsCapabilities, SUPPORTED_PROTOCOL_VERSIONS, SamplingCapabilities, ServerCapabilities,
-    ServerTasksCapability, ServerTasksRequestCapabilities, ServerTasksToolCapabilities, Task,
-    TaskCreationParams, TaskMetadata, TaskStatus, ToolCapabilities,
+    ClientTasksRequestCapabilities, ClientTasksSamplingCapabilities, ElicitationCapability,
+    FormElicitationCapability, PromptCapabilities, ResourceCapabilities, RootsCapabilities,
+    SamplingCapabilities, ServerCapabilities, ServerTasksCapability, ServerTasksRequestCapabilities,
+    ServerTasksToolCapabilities, ToolCapabilities,
+    // Sampling types
+    CreateMessageContentOrArray, CreateMessageRequestParams, CreateMessageResult,
+    CreateMessageResultWithTools, IncludeContext, ModelHint, ModelPreferences, SamplingContent,
+    SamplingMessage, SamplingMessageContent, SamplingMessageContentOrArray, StopReason, ToolChoice,
+    ToolChoiceMode, ToolResultContent, ToolUseContent,
+    // Elicitation types
+    BooleanSchema, ElicitAction, ElicitRequestFormParams, ElicitRequestParams,
+    ElicitRequestUrlParams, ElicitResult, ElicitationCompleteNotificationParams, ElicitationMode,
+    ElicitationSchema, ElicitationValue, EnumOption, NumberSchema, NumberType,
+    PrimitiveSchemaDefinition, StringFormat, StringSchema, TitledEnumSchema, UntitledEnumSchema,
+    // Core types
+    DEFAULT_NEGOTIATED_PROTOCOL_VERSION, ErrorCode, ErrorObject, LATEST_PROTOCOL_VERSION, Message,
+    MessageId, NotificationMessage, RelatedTaskMetadata, RequestMessage, ResultMessage,
+    SUPPORTED_PROTOCOL_VERSIONS, Task, TaskCreationParams, TaskMetadata, TaskStatus,
 };
 
 /// Roles that participants in the mesh can take.

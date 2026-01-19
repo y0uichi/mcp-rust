@@ -12,7 +12,7 @@
 | Tools/Resources/Prompts | ✅ 完成 | 注册和调用可用 |
 | Tasks API | ✅ 完成 | `tasks/get/list/result/cancel` 可用 |
 | OAuth/DNS 保护 | ✅ 完成 | DNS 重绑定保护 + OAuth 2.1 认证 |
-| Sampling/Elicitation | ❌ 未开始 | - |
+| Sampling/Elicitation | ✅ 完成 | 服务端请求 + 客户端处理器 |
 
 ## 详细功能对比
 
@@ -33,8 +33,8 @@
 | Logging setLevel | `logging/setLevel` 请求处理与客户端校验 | ✅ 已完成 |
 | list_changed 通知 | tools/prompts/resources list changed + debounce 刷新 | ✅ 已完成 |
 | Roots 能力 | `roots/list` 与 list_changed 支持 | ⚠️ 部分完成 |
-| Sampling `createMessage` | 服务器请求客户端采样 | ❌ 未完成 |
-| 表单/URL elicitation | `elicitation/create` 表单/URL 模式 | ❌ 未完成 |
+| Sampling `createMessage` | 服务器请求客户端采样 | ✅ 已完成 |
+| 表单/URL elicitation | `elicitation/create` 表单/URL 模式 | ✅ 已完成 |
 | 实验性任务工具 | `.experimental.tasks` 注册 task 工具 | ⚠️ 部分完成 |
 | 任务 API | `tasks/get/list/result/cancel` 与存储 | ✅ 已完成 |
 | Completion 工具 | `completion/complete`（提示/资源） | ❌ 未完成 |
@@ -174,10 +174,123 @@ let config = HttpClientConfig::new("https://api.example.com")
     .auth_provider(Arc::new(provider));
 ```
 
+## Sampling/Elicitation ✅
+
+### Sampling
+
+服务端可以请求客户端进行 LLM 采样：
+
+```rust
+use mcp_core::types::{
+    CreateMessageRequestParams, SamplingMessage, TextContent, MessageId,
+};
+
+// 检查客户端是否支持 sampling
+if server.client_supports_sampling() {
+    let params = CreateMessageRequestParams::new(
+        vec![SamplingMessage::user(TextContent::new("Hello!"))],
+        1024, // max_tokens
+    );
+
+    // 创建请求消息
+    let request = server.create_message_request(
+        MessageId::Number(1),
+        params,
+    )?;
+
+    // 通过传输层发送请求并等待响应
+    // transport.send(&request);
+}
+```
+
+### Elicitation
+
+服务端可以请求客户端收集用户输入（表单或 URL 模式）：
+
+**表单模式：**
+
+```rust
+use mcp_core::types::{
+    ElicitRequestFormParams, ElicitationSchema, StringSchema,
+    PrimitiveSchemaDefinition, MessageId,
+};
+
+// 检查客户端是否支持表单 elicitation
+if server.client_supports_form_elicitation() {
+    let schema = ElicitationSchema::new()
+        .with_property("name", PrimitiveSchemaDefinition::String(StringSchema::new()))
+        .with_required(vec!["name".to_string()]);
+
+    let params = ElicitRequestFormParams::new("Please enter your name:", schema);
+
+    let request = server.elicit_form_request(MessageId::Number(2), params)?;
+    // transport.send(&request);
+}
+```
+
+**URL 模式：**
+
+```rust
+use mcp_core::types::{ElicitRequestUrlParams, MessageId};
+
+// 检查客户端是否支持 URL elicitation
+if server.client_supports_url_elicitation() {
+    let params = ElicitRequestUrlParams::new(
+        "Please complete the authentication",
+        "auth-123",
+        "https://example.com/auth",
+    );
+
+    let request = server.elicit_url_request(MessageId::Number(3), params)?;
+    // transport.send(&request);
+
+    // 外部流程完成后发送完成通知
+    let notification = server.elicitation_complete_notification("auth-123")?;
+    // transport.send(&notification);
+}
+```
+
+### 客户端处理器
+
+客户端需要注册处理器来响应服务端请求：
+
+```rust
+use mcp_client::client::{
+    Client, SamplingHandlerFn, FormElicitationHandlerFn, UrlElicitationHandlerFn,
+    SamplingError, ElicitationError,
+};
+use mcp_core::types::{
+    CreateMessageResult, ElicitResult, ElicitAction, Role, SamplingContent, TextContent,
+};
+
+// 注册 sampling 处理器
+client.set_sampling_handler(SamplingHandlerFn(|params| {
+    // 调用 LLM 并返回结果
+    Ok(CreateMessageResult::new(
+        "gpt-4",
+        Role::Assistant,
+        SamplingContent::Text(TextContent::new("Hello!")),
+    ))
+}));
+
+// 注册表单 elicitation 处理器
+client.set_form_elicitation_handler(FormElicitationHandlerFn(|params| {
+    // 显示表单并收集用户输入
+    Ok(ElicitResult::accept(HashMap::from([
+        ("name".to_string(), "Alice".into()),
+    ])))
+}));
+
+// 注册 URL elicitation 处理器
+client.set_url_elicitation_handler(UrlElicitationHandlerFn(|params| {
+    // 打开 URL 并等待用户完成
+    Ok(ElicitResult::accept(HashMap::new()))
+}));
+```
+
 ## 后续完善方向
 
 1. **MCP 能力补齐**
-   - sampling、elicitation（表单+URL）
    - 实验性任务流式 helper
    - Roots 服务端支持
    - Completions 支持

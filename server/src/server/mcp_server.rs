@@ -4,13 +4,12 @@ use futures::future::BoxFuture;
 use serde_json::Value;
 
 use mcp_core::protocol::{ProtocolError, RequestContext};
-use mcp_core::types::RequestMessage;
-
 use mcp_core::schema::JsonSchemaValidator;
 use mcp_core::types::{
-    CallToolRequestParams, GetPromptRequestParams, ListPromptsResult, ListResourceTemplatesResult,
-    ListResourcesResult, ListToolsResult, NotificationMessage, PaginatedRequestParams,
-    PaginatedResult, PromptCapabilities, ResourceCapabilities, ResourceRequestParams,
+    CallToolRequestParams, CreateMessageRequestParams, ElicitRequestFormParams,
+    ElicitRequestUrlParams, GetPromptRequestParams, ListPromptsResult, ListResourceTemplatesResult,
+    ListResourcesResult, ListToolsResult, MessageId, NotificationMessage, PaginatedRequestParams,
+    PaginatedResult, PromptCapabilities, RequestMessage, ResourceCapabilities, ResourceRequestParams,
     ServerCapabilities, ToolCapabilities,
 };
 
@@ -150,6 +149,78 @@ impl McpServer {
             .lock()
             .expect("resource registry")
             .register_resource(resource, handler);
+    }
+
+    // ==================== Sampling API ====================
+
+    /// Create a sampling/createMessage request to send to the client.
+    /// Returns the request message that should be sent via the transport.
+    ///
+    /// # Errors
+    /// Returns an error if the client does not support sampling capability.
+    pub fn create_message_request(
+        &self,
+        id: MessageId,
+        params: CreateMessageRequestParams,
+    ) -> Result<RequestMessage, ServerError> {
+        self.server.create_message_request(id, params)
+    }
+
+    /// Check if the client supports sampling.
+    pub fn client_supports_sampling(&self) -> bool {
+        self.server.client_supports_sampling()
+    }
+
+    /// Check if the client supports sampling with tools.
+    pub fn client_supports_sampling_tools(&self) -> bool {
+        self.server.client_supports_sampling_tools()
+    }
+
+    // ==================== Elicitation API ====================
+
+    /// Create an elicitation/create request for form-based elicitation.
+    /// Returns the request message that should be sent via the transport.
+    ///
+    /// # Errors
+    /// Returns an error if the client does not support form elicitation.
+    pub fn elicit_form_request(
+        &self,
+        id: MessageId,
+        params: ElicitRequestFormParams,
+    ) -> Result<RequestMessage, ServerError> {
+        self.server.elicit_form_request(id, params)
+    }
+
+    /// Create an elicitation/create request for URL-based elicitation.
+    /// Returns the request message that should be sent via the transport.
+    ///
+    /// # Errors
+    /// Returns an error if the client does not support URL elicitation.
+    pub fn elicit_url_request(
+        &self,
+        id: MessageId,
+        params: ElicitRequestUrlParams,
+    ) -> Result<RequestMessage, ServerError> {
+        self.server.elicit_url_request(id, params)
+    }
+
+    /// Create a notification for URL elicitation completion.
+    /// This should be sent after the external URL flow has completed.
+    pub fn elicitation_complete_notification(
+        &self,
+        elicitation_id: impl Into<String>,
+    ) -> Result<NotificationMessage, ServerError> {
+        self.server.elicitation_complete_notification(elicitation_id)
+    }
+
+    /// Check if the client supports form elicitation.
+    pub fn client_supports_form_elicitation(&self) -> bool {
+        self.server.client_supports_form_elicitation()
+    }
+
+    /// Check if the client supports URL elicitation.
+    pub fn client_supports_url_elicitation(&self) -> bool {
+        self.server.client_supports_url_elicitation()
     }
 
     fn ensure_tool_handlers(&mut self) -> Result<(), ServerError> {

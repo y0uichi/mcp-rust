@@ -11,11 +11,12 @@ use mcp_core::protocol::{
 };
 use mcp_core::schema::JsonSchemaValidator;
 use mcp_core::types::{
-    CancelTaskRequestParams, CancelTaskResult, CapabilityFlag, ClientCapabilities, ErrorCode,
-    ErrorObject, GetTaskPayloadRequestParams, GetTaskRequestParams, GetTaskResult,
-    InitializeRequestParams, InitializeResult, ListTasksResult, NotificationMessage,
-    PaginatedRequestParams, PaginatedResult, RequestMessage, ResultMessage,
-    SUPPORTED_PROTOCOL_VERSIONS, ServerCapabilities, ServerTasksCapability,
+    CancelTaskRequestParams, CancelTaskResult, CapabilityFlag, ClientCapabilities,
+    CreateMessageRequestParams, ElicitRequestFormParams, ElicitRequestUrlParams,
+    ElicitationCompleteNotificationParams, ErrorCode, ErrorObject, GetTaskPayloadRequestParams,
+    GetTaskRequestParams, GetTaskResult, InitializeRequestParams, InitializeResult, ListTasksResult,
+    MessageId, NotificationMessage, PaginatedRequestParams, PaginatedResult, RequestMessage,
+    ResultMessage, SUPPORTED_PROTOCOL_VERSIONS, ServerCapabilities, ServerTasksCapability,
     ServerTasksRequestCapabilities, ServerTasksToolCapabilities, SetLevelRequestParams, Task,
     TaskStatusNotificationParams,
 };
@@ -134,6 +135,191 @@ impl Server {
             "notifications/tasks/status",
             Some(serde_json::to_value(params)?),
         ))
+    }
+
+    /// Create a sampling/createMessage request to send to the client.
+    /// Returns the request message that should be sent via the transport.
+    ///
+    /// # Errors
+    /// Returns an error if the client does not support sampling capability.
+    pub fn create_message_request(
+        &self,
+        id: MessageId,
+        params: CreateMessageRequestParams,
+    ) -> Result<RequestMessage, ServerError> {
+        // Check client capability
+        let state = self.state.lock().expect("server state");
+        let client_caps = state.client_capabilities.as_ref().ok_or_else(|| {
+            ServerError::Capability("client capabilities not available (not initialized)".into())
+        })?;
+
+        if client_caps.sampling.is_none() {
+            return Err(ServerError::Capability(
+                "client does not support sampling capability".into(),
+            ));
+        }
+
+        // Check tools capability if tools are provided
+        if params.tools.is_some() || params.tool_choice.is_some() {
+            if client_caps
+                .sampling
+                .as_ref()
+                .and_then(|s| s.tools.as_ref())
+                .is_none()
+            {
+                return Err(ServerError::Capability(
+                    "client does not support sampling tools capability".into(),
+                ));
+            }
+        }
+
+        let params_value = serde_json::to_value(&params)?;
+        Ok(RequestMessage::new(id, "sampling/createMessage", params_value))
+    }
+
+    /// Create an elicitation/create request for form-based elicitation.
+    /// Returns the request message that should be sent via the transport.
+    ///
+    /// # Errors
+    /// Returns an error if the client does not support form elicitation.
+    pub fn elicit_form_request(
+        &self,
+        id: MessageId,
+        params: ElicitRequestFormParams,
+    ) -> Result<RequestMessage, ServerError> {
+        let state = self.state.lock().expect("server state");
+        let client_caps = state.client_capabilities.as_ref().ok_or_else(|| {
+            ServerError::Capability("client capabilities not available (not initialized)".into())
+        })?;
+
+        // Check elicitation capability - form is default when elicitation is declared
+        let elicitation = client_caps.elicitation.as_ref().ok_or_else(|| {
+            ServerError::Capability("client does not support elicitation capability".into())
+        })?;
+
+        // Form mode is supported if elicitation is declared (form is the default)
+        // unless only url is explicitly declared
+        let has_form = elicitation.form.is_some();
+        let has_url = elicitation.url.is_some();
+
+        if !has_form && has_url {
+            return Err(ServerError::Capability(
+                "client does not support form elicitation (only url mode)".into(),
+            ));
+        }
+
+        let params_value = serde_json::to_value(&params)?;
+        Ok(RequestMessage::new(id, "elicitation/create", params_value))
+    }
+
+    /// Create an elicitation/create request for URL-based elicitation.
+    /// Returns the request message that should be sent via the transport.
+    ///
+    /// # Errors
+    /// Returns an error if the client does not support URL elicitation.
+    pub fn elicit_url_request(
+        &self,
+        id: MessageId,
+        params: ElicitRequestUrlParams,
+    ) -> Result<RequestMessage, ServerError> {
+        let state = self.state.lock().expect("server state");
+        let client_caps = state.client_capabilities.as_ref().ok_or_else(|| {
+            ServerError::Capability("client capabilities not available (not initialized)".into())
+        })?;
+
+        let elicitation = client_caps.elicitation.as_ref().ok_or_else(|| {
+            ServerError::Capability("client does not support elicitation capability".into())
+        })?;
+
+        if elicitation.url.is_none() {
+            return Err(ServerError::Capability(
+                "client does not support URL elicitation".into(),
+            ));
+        }
+
+        let params_value = serde_json::to_value(&params)?;
+        Ok(RequestMessage::new(id, "elicitation/create", params_value))
+    }
+
+    /// Create a notification for URL elicitation completion.
+    /// This should be sent after the external URL flow has completed.
+    ///
+    /// # Errors
+    /// Returns an error if the client does not support URL elicitation.
+    pub fn elicitation_complete_notification(
+        &self,
+        elicitation_id: impl Into<String>,
+    ) -> Result<NotificationMessage, ServerError> {
+        let state = self.state.lock().expect("server state");
+        let client_caps = state.client_capabilities.as_ref().ok_or_else(|| {
+            ServerError::Capability("client capabilities not available (not initialized)".into())
+        })?;
+
+        let elicitation = client_caps.elicitation.as_ref().ok_or_else(|| {
+            ServerError::Capability("client does not support elicitation capability".into())
+        })?;
+
+        if elicitation.url.is_none() {
+            return Err(ServerError::Capability(
+                "client does not support URL elicitation".into(),
+            ));
+        }
+
+        let params = ElicitationCompleteNotificationParams::new(elicitation_id);
+        Ok(NotificationMessage::new(
+            "notifications/elicitation/complete",
+            Some(serde_json::to_value(params)?),
+        ))
+    }
+
+    /// Check if the client supports sampling.
+    pub fn client_supports_sampling(&self) -> bool {
+        self.state
+            .lock()
+            .expect("server state")
+            .client_capabilities
+            .as_ref()
+            .and_then(|c| c.sampling.as_ref())
+            .is_some()
+    }
+
+    /// Check if the client supports sampling with tools.
+    pub fn client_supports_sampling_tools(&self) -> bool {
+        self.state
+            .lock()
+            .expect("server state")
+            .client_capabilities
+            .as_ref()
+            .and_then(|c| c.sampling.as_ref())
+            .and_then(|s| s.tools.as_ref())
+            .is_some()
+    }
+
+    /// Check if the client supports form elicitation.
+    pub fn client_supports_form_elicitation(&self) -> bool {
+        let state = self.state.lock().expect("server state");
+        let client_caps = match state.client_capabilities.as_ref() {
+            Some(c) => c,
+            None => return false,
+        };
+        let elicitation = match client_caps.elicitation.as_ref() {
+            Some(e) => e,
+            None => return false,
+        };
+        // Form is default if elicitation is declared
+        elicitation.form.is_some() || elicitation.url.is_none()
+    }
+
+    /// Check if the client supports URL elicitation.
+    pub fn client_supports_url_elicitation(&self) -> bool {
+        self.state
+            .lock()
+            .expect("server state")
+            .client_capabilities
+            .as_ref()
+            .and_then(|c| c.elicitation.as_ref())
+            .and_then(|e| e.url.as_ref())
+            .is_some()
     }
 
     pub async fn handle_request(
