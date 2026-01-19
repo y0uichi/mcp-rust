@@ -50,8 +50,15 @@ impl McpServer {
         &mut self.server
     }
 
-    pub fn register_tool(&mut self, tool: mcp_core::types::Tool, handler: impl ToolHandler) -> Result<(), ServerError> {
-        self.tools.lock().expect("tool registry").register_tool(tool, handler);
+    pub fn register_tool(
+        &mut self,
+        tool: mcp_core::types::Tool,
+        handler: impl ToolHandler,
+    ) -> Result<(), ServerError> {
+        self.tools
+            .lock()
+            .expect("tool registry")
+            .register_tool(tool, handler);
         self.server.register_capabilities(ServerCapabilities {
             tools: Some(ToolCapabilities {
                 list_changed: Some(true),
@@ -62,7 +69,11 @@ impl McpServer {
         Ok(())
     }
 
-    pub fn register_resource(&mut self, resource: mcp_core::types::Resource, handler: impl ResourceHandler) -> Result<(), ServerError> {
+    pub fn register_resource(
+        &mut self,
+        resource: mcp_core::types::Resource,
+        handler: impl ResourceHandler,
+    ) -> Result<(), ServerError> {
         self.resources
             .lock()
             .expect("resource registry")
@@ -97,7 +108,11 @@ impl McpServer {
         Ok(())
     }
 
-    pub fn register_prompt(&mut self, prompt: mcp_core::types::Prompt, handler: impl PromptHandler) -> Result<(), ServerError> {
+    pub fn register_prompt(
+        &mut self,
+        prompt: mcp_core::types::Prompt,
+        handler: impl PromptHandler,
+    ) -> Result<(), ServerError> {
         self.prompts
             .lock()
             .expect("prompt registry")
@@ -126,7 +141,11 @@ impl McpServer {
 
     /// Add a resource to the registry after initialization without modifying capabilities.
     /// This is useful when resources are discovered dynamically after the client has initialized.
-    pub fn add_resource_after_init(&self, resource: mcp_core::types::Resource, handler: impl ResourceHandler) {
+    pub fn add_resource_after_init(
+        &self,
+        resource: mcp_core::types::Resource,
+        handler: impl ResourceHandler,
+    ) {
         self.resources
             .lock()
             .expect("resource registry")
@@ -140,7 +159,9 @@ impl McpServer {
 
         let tools = self.tools.clone();
         let list_handler = RequestHandlerFn::new(
-            move |_request: &RequestMessage, _context: &RequestContext| -> BoxFuture<'static, Result<Value, ProtocolError>> {
+            move |_request: &RequestMessage,
+                  _context: &RequestContext|
+                  -> BoxFuture<'static, Result<Value, ProtocolError>> {
                 let tools = tools.clone();
                 Box::pin(async move {
                     let tools = tools.lock().expect("tool registry").list_tools();
@@ -161,7 +182,9 @@ impl McpServer {
 
         let tools = self.tools.clone();
         let call_handler = RequestHandlerFn::new(
-            move |request: &RequestMessage, context: &RequestContext| -> BoxFuture<'static, Result<Value, ProtocolError>> {
+            move |request: &RequestMessage,
+                  context: &RequestContext|
+                  -> BoxFuture<'static, Result<Value, ProtocolError>> {
                 let tools = tools.clone();
                 let params_value = request.params.clone();
                 let context = context.clone();
@@ -198,10 +221,15 @@ impl McpServer {
 
         let resources = self.resources.clone();
         let list_handler = RequestHandlerFn::new(
-            move |_request: &RequestMessage, _context: &RequestContext| -> BoxFuture<'static, Result<Value, ProtocolError>> {
+            move |_request: &RequestMessage,
+                  _context: &RequestContext|
+                  -> BoxFuture<'static, Result<Value, ProtocolError>> {
                 let resources = resources.clone();
                 Box::pin(async move {
-                    let resources = resources.lock().expect("resource registry").list_resources();
+                    let resources = resources
+                        .lock()
+                        .expect("resource registry")
+                        .list_resources();
                     let result = ListResourcesResult {
                         pagination: PaginatedResult::default(),
                         resources,
@@ -219,10 +247,15 @@ impl McpServer {
 
         let templates = self.resources.clone();
         let template_handler = RequestHandlerFn::new(
-            move |_request: &RequestMessage, _context: &RequestContext| -> BoxFuture<'static, Result<Value, ProtocolError>> {
+            move |_request: &RequestMessage,
+                  _context: &RequestContext|
+                  -> BoxFuture<'static, Result<Value, ProtocolError>> {
                 let templates = templates.clone();
                 Box::pin(async move {
-                    let templates = templates.lock().expect("resource registry").list_templates();
+                    let templates = templates
+                        .lock()
+                        .expect("resource registry")
+                        .list_templates();
                     let result = ListResourceTemplatesResult {
                         pagination: PaginatedResult::default(),
                         resource_templates: templates,
@@ -240,7 +273,9 @@ impl McpServer {
 
         let resources = self.resources.clone();
         let read_handler = RequestHandlerFn::new(
-            move |request: &RequestMessage, context: &RequestContext| -> BoxFuture<'static, Result<Value, ProtocolError>> {
+            move |request: &RequestMessage,
+                  context: &RequestContext|
+                  -> BoxFuture<'static, Result<Value, ProtocolError>> {
                 let resources = resources.clone();
                 let params_value = request.params.clone();
                 let context = context.clone();
@@ -277,7 +312,9 @@ impl McpServer {
 
         let prompts = self.prompts.clone();
         let list_handler = RequestHandlerFn::new(
-            move |_request: &RequestMessage, _context: &RequestContext| -> BoxFuture<'static, Result<Value, ProtocolError>> {
+            move |_request: &RequestMessage,
+                  _context: &RequestContext|
+                  -> BoxFuture<'static, Result<Value, ProtocolError>> {
                 let prompts = prompts.clone();
                 Box::pin(async move {
                     let prompts = prompts.lock().expect("prompt registry").list_prompts();
@@ -298,7 +335,9 @@ impl McpServer {
 
         let prompts = self.prompts.clone();
         let get_handler = RequestHandlerFn::new(
-            move |request: &RequestMessage, context: &RequestContext| -> BoxFuture<'static, Result<Value, ProtocolError>> {
+            move |request: &RequestMessage,
+                  context: &RequestContext|
+                  -> BoxFuture<'static, Result<Value, ProtocolError>> {
                 let prompts = prompts.clone();
                 let params_value = request.params.clone();
                 let context = context.clone();

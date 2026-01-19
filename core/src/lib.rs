@@ -3,6 +3,7 @@
 //! by exposing configuration helpers, transport-neutral types, schema validation,
 //! and a lightweight protocol runtime.
 
+pub mod http;
 pub mod protocol;
 pub mod schema;
 pub mod stdio;
@@ -18,13 +19,13 @@ pub use crate::stdio::{
 };
 pub use crate::types::{
     CapabilityFlag, ClientCapabilities, ClientTasksCapability, ClientTasksElicitationCapabilities,
-    ClientTasksRequestCapabilities, ClientTasksSamplingCapabilities, ElicitationCapability,
-    ErrorCode, ErrorObject, FormElicitationCapability, Message, MessageId, NotificationMessage,
+    ClientTasksRequestCapabilities, ClientTasksSamplingCapabilities,
+    DEFAULT_NEGOTIATED_PROTOCOL_VERSION, ElicitationCapability, ErrorCode, ErrorObject,
+    FormElicitationCapability, LATEST_PROTOCOL_VERSION, Message, MessageId, NotificationMessage,
     PromptCapabilities, RelatedTaskMetadata, RequestMessage, ResourceCapabilities, ResultMessage,
-    RootsCapabilities, SamplingCapabilities, ServerCapabilities, ServerTasksCapability,
-    ServerTasksRequestCapabilities, ServerTasksToolCapabilities, Task, TaskCreationParams,
-    TaskMetadata, TaskStatus, ToolCapabilities, DEFAULT_NEGOTIATED_PROTOCOL_VERSION,
-    LATEST_PROTOCOL_VERSION, SUPPORTED_PROTOCOL_VERSIONS,
+    RootsCapabilities, SUPPORTED_PROTOCOL_VERSIONS, SamplingCapabilities, ServerCapabilities,
+    ServerTasksCapability, ServerTasksRequestCapabilities, ServerTasksToolCapabilities, Task,
+    TaskCreationParams, TaskMetadata, TaskStatus, ToolCapabilities,
 };
 
 /// Roles that participants in the mesh can take.
@@ -71,11 +72,11 @@ pub enum Environment {
 
 /// Common exports to avoid repetitive imports in binaries.
 pub mod prelude {
-    pub use super::{CoreConfig as Config, Environment};
-    pub use super::{JsonSchemaValidator, SchemaValidator};
-    pub use super::{Message, NotificationMessage, RequestMessage, ResultMessage, Role};
     pub use super::{
         CancellationToken, NotificationHandler, Protocol, ProtocolError, ProtocolOptions,
         RequestContext, RequestHandler, RequestOptions,
     };
+    pub use super::{CoreConfig as Config, Environment};
+    pub use super::{JsonSchemaValidator, SchemaValidator};
+    pub use super::{Message, NotificationMessage, RequestMessage, ResultMessage, Role};
 }

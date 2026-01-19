@@ -1,5 +1,6 @@
 //! Streamline stdio helpers for the client binary.
 pub mod client;
+pub mod http;
 pub mod stdio;
 
 pub use stdio::{
@@ -9,3 +10,5 @@ pub use stdio::{
 };
 
 pub use client::{Client, ClientCapabilities, ClientError, ClientOptions};
+
+pub use http::{HttpClientConfig, HttpClientError, HttpClientTransport, ReconnectOptions};

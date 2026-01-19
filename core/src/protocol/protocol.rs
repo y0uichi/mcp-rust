@@ -156,14 +156,9 @@ impl<V: SchemaValidator> Protocol<V> {
             let store_result = match result {
                 Ok(value) => store.set_task_result(&task_state.task_id, Ok(value)).await,
                 Err(err) => {
-                    let error = ErrorObject::new(
-                        ErrorCode::InternalError as i32,
-                        err.to_string(),
-                        None,
-                    );
-                    store
-                        .set_task_result(&task_state.task_id, Err(error))
-                        .await
+                    let error =
+                        ErrorObject::new(ErrorCode::InternalError as i32, err.to_string(), None);
+                    store.set_task_result(&task_state.task_id, Err(error)).await
                 }
             };
             store_result?;

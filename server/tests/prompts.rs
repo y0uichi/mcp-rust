@@ -26,16 +26,19 @@ fn prompts_list_and_get_work() {
     };
 
     server
-        .register_prompt(prompt, |_args, _ctx: mcp_core::protocol::RequestContext| async move {
-            Ok(GetPromptResult {
-                description: Some("welcome prompt".to_string()),
-                messages: vec![PromptMessage {
-                    role: Role::Assistant,
-                    content: ContentBlock::Text(TextContent::new("hi")),
-                }],
-                meta: None,
-            })
-        })
+        .register_prompt(
+            prompt,
+            |_args, _ctx: mcp_core::protocol::RequestContext| async move {
+                Ok(GetPromptResult {
+                    description: Some("welcome prompt".to_string()),
+                    messages: vec![PromptMessage {
+                        role: Role::Assistant,
+                        content: ContentBlock::Text(TextContent::new("hi")),
+                    }],
+                    meta: None,
+                })
+            },
+        )
         .expect("register prompt");
 
     let list_request = RequestMessage::new("1", "prompts/list", json!({}));
@@ -55,8 +58,8 @@ fn prompts_list_and_get_work() {
         "prompts/get",
         serde_json::to_value(get_params).unwrap(),
     );
-    let get_response = block_on(server.server().handle_request(get_request, None))
-        .expect("prompts/get response");
+    let get_response =
+        block_on(server.server().handle_request(get_request, None)).expect("prompts/get response");
     let get_result: GetPromptResult = serde_json::from_value(get_response.result.unwrap()).unwrap();
     assert_eq!(get_result.messages.len(), 1);
 

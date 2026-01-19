@@ -21,7 +21,10 @@ where
     F: Send
         + Sync
         + 'static
-        + Fn(&NotificationMessage, &NotificationContext) -> BoxFuture<'static, Result<(), ProtocolError>>,
+        + Fn(
+            &NotificationMessage,
+            &NotificationContext,
+        ) -> BoxFuture<'static, Result<(), ProtocolError>>,
 {
     async fn handle(
         &self,

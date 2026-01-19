@@ -6,4 +6,6 @@ members = [
     "client",
     "examples/mcp-filesystem-client",
     "examples/mcp-filesystem-server",
+    "examples/http-client",
+    "examples/http-server",
 ]

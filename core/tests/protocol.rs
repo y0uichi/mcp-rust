@@ -4,7 +4,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use mcp_core::{JsonSchemaValidator, Protocol, ProtocolError, RequestContext, RequestHandler, RequestMessage};
+use mcp_core::{
+    JsonSchemaValidator, Protocol, ProtocolError, RequestContext, RequestHandler, RequestMessage,
+};
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 struct EchoParams {

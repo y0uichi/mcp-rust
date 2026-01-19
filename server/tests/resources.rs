@@ -32,19 +32,19 @@ fn resources_list_templates_and_read_work() {
         .register_resource(
             resource,
             |uri: String, _ctx: mcp_core::protocol::RequestContext| async move {
-            let contents = ResourceContents::Text(TextResourceContents {
-                base: ResourceContentsBase {
-                    uri: uri.to_string(),
-                    mime_type: Some("text/plain".to_string()),
+                let contents = ResourceContents::Text(TextResourceContents {
+                    base: ResourceContentsBase {
+                        uri: uri.to_string(),
+                        mime_type: Some("text/plain".to_string()),
+                        meta: None,
+                    },
+                    text: "hello".to_string(),
+                });
+                Ok(ReadResourceResult {
+                    contents: vec![contents],
                     meta: None,
-                },
-                text: "hello".to_string(),
-            });
-            Ok(ReadResourceResult {
-                contents: vec![contents],
-                meta: None,
-            })
-        },
+                })
+            },
         )
         .expect("register resource");
 
@@ -90,7 +90,8 @@ fn resources_list_templates_and_read_work() {
     );
     let read_response = block_on(server.server().handle_request(read_request, None))
         .expect("resources/read response");
-    let read_result: ReadResourceResult = serde_json::from_value(read_response.result.unwrap()).unwrap();
+    let read_result: ReadResourceResult =
+        serde_json::from_value(read_response.result.unwrap()).unwrap();
     assert_eq!(read_result.contents.len(), 1);
 
     let notification = server.resource_list_changed_notification();

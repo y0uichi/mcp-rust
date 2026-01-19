@@ -10,6 +10,9 @@ pub struct RequestMeta {
     #[serde(rename = "progressToken", skip_serializing_if = "Option::is_none")]
     pub progress_token: Option<ProgressToken>,
     /// Optional related task reference.
-    #[serde(rename = "io.modelcontextprotocol/related-task", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "io.modelcontextprotocol/related-task",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub related_task: Option<RelatedTaskMetadata>,
 }

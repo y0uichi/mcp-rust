@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(~/.cargo/bin/cargo check --all-targets)",
+      "Bash(~/.cargo/bin/cargo test --all)",
+      "Bash(~/.cargo/bin/cargo check:*)",
+      "Bash(cargo check:*)",
+      "Bash(export PATH=\"$HOME/.cargo/bin:$PATH\")"
+    ]
+  }
+}

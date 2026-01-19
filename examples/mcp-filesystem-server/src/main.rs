@@ -5,11 +5,11 @@ use std::sync::{Arc, Mutex};
 use futures::executor::block_on;
 use mcp_core::stdio::{JsonRpcMessage, serialize_message};
 use mcp_core::types::{
-    BaseMetadata, CallToolResult, ContentBlock, Implementation, Icons, ReadResourceResult,
+    BaseMetadata, CallToolResult, ContentBlock, Icons, Implementation, ReadResourceResult,
     RequestMessage, Resource, ServerCapabilities, TextContent, Tool,
 };
 use mcp_server::{McpServer, ServerError, ServerOptions};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 struct FilesystemState {
     roots: Vec<Value>,
@@ -43,7 +43,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         }),
         ..Default::default()
     });
-    server_options.instructions = Some("Filesystem MCP server that provides file operations.".to_string());
+    server_options.instructions =
+        Some("Filesystem MCP server that provides file operations.".to_string());
 
     let mut server = McpServer::new(server_info.clone(), server_options);
 
@@ -56,10 +57,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }));
 
     let state_for_init = state.clone();
-    server.server_mut().set_on_initialized(Some(Arc::new(move || {
-        let mut state = state_for_init.lock().unwrap();
-        state.initialized = true;
-    })));
+    server
+        .server_mut()
+        .set_on_initialized(Some(Arc::new(move || {
+            let mut state = state_for_init.lock().unwrap();
+            state.initialized = true;
+        })));
 
     let stdin = io::stdin();
     let mut stdout = io::stdout();
@@ -153,32 +156,35 @@ fn register_filesystem_tools(server: &mut McpServer) -> Result<(), ServerError> 
         meta: None,
     };
 
-    server.register_tool(read_file_tool, |arguments: Option<Value>, _context: mcp_core::protocol::RequestContext| {
-        Box::pin(async move {
-            let args = arguments.as_ref().and_then(|a| a.as_object());
-            let path = args
-                .and_then(|a| a.get("path"))
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string())
-                .ok_or_else(|| ServerError::Handler("missing path argument".to_string()))?;
+    server.register_tool(
+        read_file_tool,
+        |arguments: Option<Value>, _context: mcp_core::protocol::RequestContext| {
+            Box::pin(async move {
+                let args = arguments.as_ref().and_then(|a| a.as_object());
+                let path = args
+                    .and_then(|a| a.get("path"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .ok_or_else(|| ServerError::Handler("missing path argument".to_string()))?;
 
-            let path = uri_to_path(&path)?;
-            let contents = std::fs::read_to_string(&path)
-                .map_err(|e| ServerError::Handler(format!("failed to read file: {e}")))?;
+                let path = uri_to_path(&path)?;
+                let contents = std::fs::read_to_string(&path)
+                    .map_err(|e| ServerError::Handler(format!("failed to read file: {e}")))?;
 
-            Ok(CallToolResult {
-                content: vec![ContentBlock::Text(TextContent {
-                    kind: "text".to_string(),
-                    text: contents,
-                    annotations: None,
+                Ok(CallToolResult {
+                    content: vec![ContentBlock::Text(TextContent {
+                        kind: "text".to_string(),
+                        text: contents,
+                        annotations: None,
+                        meta: None,
+                    })],
+                    structured_content: None,
+                    is_error: None,
                     meta: None,
-                })],
-                structured_content: None,
-                is_error: None,
-                meta: None,
+                })
             })
-        })
-    })?;
+        },
+    )?;
 
     let write_file_tool = Tool {
         base: BaseMetadata {
@@ -207,38 +213,41 @@ fn register_filesystem_tools(server: &mut McpServer) -> Result<(), ServerError> 
         meta: None,
     };
 
-    server.register_tool(write_file_tool, |arguments: Option<Value>, _context: mcp_core::protocol::RequestContext| {
-        Box::pin(async move {
-            let args = arguments.as_ref().and_then(|a| a.as_object());
-            let path = args
-                .and_then(|a| a.get("path"))
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string())
-                .ok_or_else(|| ServerError::Handler("missing path argument".to_string()))?;
+    server.register_tool(
+        write_file_tool,
+        |arguments: Option<Value>, _context: mcp_core::protocol::RequestContext| {
+            Box::pin(async move {
+                let args = arguments.as_ref().and_then(|a| a.as_object());
+                let path = args
+                    .and_then(|a| a.get("path"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .ok_or_else(|| ServerError::Handler("missing path argument".to_string()))?;
 
-            let contents = args
-                .and_then(|a| a.get("contents"))
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string())
-                .ok_or_else(|| ServerError::Handler("missing contents argument".to_string()))?;
+                let contents = args
+                    .and_then(|a| a.get("contents"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .ok_or_else(|| ServerError::Handler("missing contents argument".to_string()))?;
 
-            let path = uri_to_path(&path)?;
-            std::fs::write(&path, contents)
-                .map_err(|e| ServerError::Handler(format!("failed to write file: {e}")))?;
+                let path = uri_to_path(&path)?;
+                std::fs::write(&path, contents)
+                    .map_err(|e| ServerError::Handler(format!("failed to write file: {e}")))?;
 
-            Ok(CallToolResult {
-                content: vec![ContentBlock::Text(TextContent {
-                    kind: "text".to_string(),
-                    text: "File written successfully".to_string(),
-                    annotations: None,
+                Ok(CallToolResult {
+                    content: vec![ContentBlock::Text(TextContent {
+                        kind: "text".to_string(),
+                        text: "File written successfully".to_string(),
+                        annotations: None,
+                        meta: None,
+                    })],
+                    structured_content: None,
+                    is_error: None,
                     meta: None,
-                })],
-                structured_content: None,
-                is_error: None,
-                meta: None,
+                })
             })
-        })
-    })?;
+        },
+    )?;
 
     let list_directory_tool = Tool {
         base: BaseMetadata {
@@ -263,46 +272,49 @@ fn register_filesystem_tools(server: &mut McpServer) -> Result<(), ServerError> 
         meta: None,
     };
 
-    server.register_tool(list_directory_tool, |arguments: Option<Value>, _context: mcp_core::protocol::RequestContext| {
-        Box::pin(async move {
-            let args = arguments.as_ref().and_then(|a| a.as_object());
-            let path = args
-                .and_then(|a| a.get("path"))
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string())
-                .ok_or_else(|| ServerError::Handler("missing path argument".to_string()))?;
+    server.register_tool(
+        list_directory_tool,
+        |arguments: Option<Value>, _context: mcp_core::protocol::RequestContext| {
+            Box::pin(async move {
+                let args = arguments.as_ref().and_then(|a| a.as_object());
+                let path = args
+                    .and_then(|a| a.get("path"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .ok_or_else(|| ServerError::Handler("missing path argument".to_string()))?;
 
-            let path = uri_to_path(&path)?;
-            let entries = std::fs::read_dir(&path)
-                .map_err(|e| ServerError::Handler(format!("failed to read directory: {e}")))?;
+                let path = uri_to_path(&path)?;
+                let entries = std::fs::read_dir(&path)
+                    .map_err(|e| ServerError::Handler(format!("failed to read directory: {e}")))?;
 
-            let mut files = Vec::new();
-            for entry in entries {
-                let entry = entry.map_err(|e| {
-                    ServerError::Handler(format!("failed to read directory entry: {e}"))
-                })?;
-                let path = entry.path();
-                let name = path
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("unknown")
-                    .to_string();
-                let is_dir = path.is_dir();
-                files.push(json!({
-                    "name": name,
-                    "path": path_to_file_uri(&path),
-                    "type": if is_dir { "directory" } else { "file" }
-                }));
-            }
+                let mut files = Vec::new();
+                for entry in entries {
+                    let entry = entry.map_err(|e| {
+                        ServerError::Handler(format!("failed to read directory entry: {e}"))
+                    })?;
+                    let path = entry.path();
+                    let name = path
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("unknown")
+                        .to_string();
+                    let is_dir = path.is_dir();
+                    files.push(json!({
+                        "name": name,
+                        "path": path_to_file_uri(&path),
+                        "type": if is_dir { "directory" } else { "file" }
+                    }));
+                }
 
-            Ok(CallToolResult {
-                content: vec![],
-                structured_content: Some(json!({ "files": files })),
-                is_error: None,
-                meta: None,
+                Ok(CallToolResult {
+                    content: vec![],
+                    structured_content: Some(json!({ "files": files })),
+                    is_error: None,
+                    meta: None,
+                })
             })
-        })
-    })?;
+        },
+    )?;
 
     Ok(())
 }
@@ -311,10 +323,7 @@ fn register_filesystem_resources(_server: &mut McpServer) -> Result<(), ServerEr
     Ok(())
 }
 
-fn register_resources_from_roots_after_init(
-    server: &McpServer,
-    roots: &[Value],
-) {
+fn register_resources_from_roots_after_init(server: &McpServer, roots: &[Value]) {
     for root in roots {
         if let Some(uri) = root.get("uri").and_then(|u| u.as_str()) {
             if let Ok(path) = uri_to_path(uri) {
@@ -325,7 +334,12 @@ fn register_resources_from_roots_after_init(
                                 .get("name")
                                 .and_then(|n| n.as_str())
                                 .map(|s| s.to_string())
-                                .unwrap_or_else(|| path.file_name().and_then(|n| n.to_str()).unwrap_or("root").to_string()),
+                                .unwrap_or_else(|| {
+                                    path.file_name()
+                                        .and_then(|n| n.to_str())
+                                        .unwrap_or("root")
+                                        .to_string()
+                                }),
                             title: None,
                         },
                         icons: Icons::default(),
@@ -341,13 +355,16 @@ fn register_resources_from_roots_after_init(
                         let uri = uri.clone();
                         Box::pin(async move {
                             let path = uri_to_path(&uri)?;
-                            let entries = std::fs::read_dir(&path)
-                                .map_err(|e| ServerError::Handler(format!("failed to read directory: {e}")))?;
+                            let entries = std::fs::read_dir(&path).map_err(|e| {
+                                ServerError::Handler(format!("failed to read directory: {e}"))
+                            })?;
 
                             let mut files = Vec::new();
                             for entry in entries {
                                 let entry = entry.map_err(|e| {
-                                    ServerError::Handler(format!("failed to read directory entry: {e}"))
+                                    ServerError::Handler(format!(
+                                        "failed to read directory entry: {e}"
+                                    ))
                                 })?;
                                 let path = entry.path();
                                 let name = path
@@ -384,7 +401,12 @@ fn register_resources_from_roots_after_init(
                                 .get("name")
                                 .and_then(|n| n.as_str())
                                 .map(|s| s.to_string())
-                                .unwrap_or_else(|| path.file_name().and_then(|n| n.to_str()).unwrap_or("file").to_string()),
+                                .unwrap_or_else(|| {
+                                    path.file_name()
+                                        .and_then(|n| n.to_str())
+                                        .unwrap_or("file")
+                                        .to_string()
+                                }),
                             title: None,
                         },
                         icons: Icons::default(),
@@ -400,8 +422,9 @@ fn register_resources_from_roots_after_init(
                         let uri = uri.clone();
                         Box::pin(async move {
                             let path = uri_to_path(&uri)?;
-                            let contents = std::fs::read_to_string(&path)
-                                .map_err(|e| ServerError::Handler(format!("failed to read file: {e}")))?;
+                            let contents = std::fs::read_to_string(&path).map_err(|e| {
+                                ServerError::Handler(format!("failed to read file: {e}"))
+                            })?;
 
                             Ok(ReadResourceResult {
                                 contents: vec![mcp_core::types::ResourceContents::Text(

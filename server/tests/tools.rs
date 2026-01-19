@@ -29,19 +29,22 @@ fn tools_list_and_call_work() {
     };
 
     server
-        .register_tool(tool, |_args, _ctx: mcp_core::protocol::RequestContext| async move {
-            Ok(CallToolResult {
-                content: vec![ContentBlock::Text(TextContent::new("ok"))],
-                structured_content: None,
-                is_error: None,
-                meta: None,
-            })
-        })
+        .register_tool(
+            tool,
+            |_args, _ctx: mcp_core::protocol::RequestContext| async move {
+                Ok(CallToolResult {
+                    content: vec![ContentBlock::Text(TextContent::new("ok"))],
+                    structured_content: None,
+                    is_error: None,
+                    meta: None,
+                })
+            },
+        )
         .expect("register tool");
 
     let list_request = RequestMessage::new("1", "tools/list", json!({}));
-    let list_response = block_on(server.server().handle_request(list_request, None))
-        .expect("tools/list response");
+    let list_response =
+        block_on(server.server().handle_request(list_request, None)).expect("tools/list response");
     let list_result: mcp_core::types::ListToolsResult =
         serde_json::from_value(list_response.result.unwrap()).unwrap();
     assert_eq!(list_result.tools.len(), 1);
@@ -57,9 +60,10 @@ fn tools_list_and_call_work() {
         "tools/call",
         serde_json::to_value(call_params).unwrap(),
     );
-    let call_response = block_on(server.server().handle_request(call_request, None))
-        .expect("tools/call response");
-    let call_result: CallToolResult = serde_json::from_value(call_response.result.unwrap()).unwrap();
+    let call_response =
+        block_on(server.server().handle_request(call_request, None)).expect("tools/call response");
+    let call_result: CallToolResult =
+        serde_json::from_value(call_response.result.unwrap()).unwrap();
     assert!(!call_result.content.is_empty());
 
     let notification = server.tool_list_changed_notification();

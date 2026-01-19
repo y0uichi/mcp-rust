@@ -9,7 +9,9 @@ pub struct ListChangedOptions<T> {
 }
 
 impl<T> ListChangedOptions<T> {
-    pub fn new(on_changed: impl Fn(Result<Option<Vec<T>>, String>) + Send + Sync + 'static) -> Self {
+    pub fn new(
+        on_changed: impl Fn(Result<Option<Vec<T>>, String>) + Send + Sync + 'static,
+    ) -> Self {
         Self {
             auto_refresh: true,
             debounce_ms: None,

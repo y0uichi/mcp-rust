@@ -1,7 +1,10 @@
 mod support;
 
 use futures::executor::block_on;
-use mcp_core::types::{ClientCapabilities, InitializeRequestParams, InitializeResult, RequestMessage, RequestParams, LATEST_PROTOCOL_VERSION};
+use mcp_core::types::{
+    ClientCapabilities, InitializeRequestParams, InitializeResult, LATEST_PROTOCOL_VERSION,
+    RequestMessage, RequestParams,
+};
 use mcp_server::{Server, ServerOptions};
 
 #[test]

@@ -1,12 +1,17 @@
 use std::collections::HashMap;
-use std::sync::{Mutex, atomic::{AtomicU64, Ordering}};
+use std::sync::{
+    Mutex,
+    atomic::{AtomicU64, Ordering},
+};
 
 use async_trait::async_trait;
 use serde_json::Value;
 use time::format_description::well_known::Rfc3339;
 
 use mcp_core::protocol::{ProtocolError, TaskStore};
-use mcp_core::types::{Cursor, ErrorObject, MessageId, RequestMessage, Task, TaskMetadata, TaskStatus};
+use mcp_core::types::{
+    Cursor, ErrorObject, MessageId, RequestMessage, Task, TaskMetadata, TaskStatus,
+};
 
 /// Simple in-memory TaskStore implementation.
 pub struct InMemoryTaskStore {
@@ -58,7 +63,9 @@ impl TaskStore for InMemoryTaskStore {
             status_message: None,
             meta: None,
         };
-        self.tasks.lock().expect("task mutex")
+        self.tasks
+            .lock()
+            .expect("task mutex")
             .insert(task_id, task.clone());
         Ok(task)
     }
@@ -79,18 +86,15 @@ impl TaskStore for InMemoryTaskStore {
             }
             task.last_updated_at = Self::now_timestamp();
         }
-        self.results.lock().expect("result mutex")
+        self.results
+            .lock()
+            .expect("result mutex")
             .insert(task_id.to_string(), result);
         Ok(())
     }
 
     async fn get_task(&self, task_id: &str) -> Result<Option<Task>, ProtocolError> {
-        Ok(self
-            .tasks
-            .lock()
-            .expect("task mutex")
-            .get(task_id)
-            .cloned())
+        Ok(self.tasks.lock().expect("task mutex").get(task_id).cloned())
     }
 
     async fn list_tasks(

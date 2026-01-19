@@ -1,0 +1,13 @@
+[package]
+name = "mcp-http-server"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+mcp_core = { path = "../../core" }
+mcp_server = { path = "../../server" }
+futures = "0.3"
+serde_json = "1.0"
+
+# For the simple HTTP server
+tiny_http = "0.12"

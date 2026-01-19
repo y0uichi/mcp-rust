@@ -3,10 +3,10 @@ pub mod in_memory_task_store;
 pub mod mcp_server;
 pub mod registries;
 pub mod server;
+pub mod server_capability_checker;
 pub mod server_error;
 pub mod server_options;
 pub mod server_state;
-pub mod server_capability_checker;
 
 pub use in_memory_task_store::InMemoryTaskStore;
 pub use mcp_server::McpServer;

@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use crate::client::{ClientCapabilities, Implementation, JsonSchemaValidator, ListChangedHandlers, NoopJsonSchemaValidator};
+use crate::client::{
+    ClientCapabilities, Implementation, JsonSchemaValidator, ListChangedHandlers,
+    NoopJsonSchemaValidator,
+};
 
 /// Options provided when constructing a client.
 #[derive(Clone)]
@@ -10,6 +13,7 @@ pub struct ClientOptions {
     pub capabilities: Option<ClientCapabilities>,
     pub list_changed: Option<ListChangedHandlers>,
     pub json_schema_validator: Option<Arc<dyn JsonSchemaValidator>>,
+    pub roots: Option<Vec<mcp_core::types::Root>>,
 }
 
 impl ClientOptions {
@@ -20,6 +24,7 @@ impl ClientOptions {
             capabilities: None,
             list_changed: None,
             json_schema_validator: Some(Arc::new(NoopJsonSchemaValidator::default())),
+            roots: None,
         }
     }
 
@@ -43,11 +48,13 @@ impl ClientOptions {
         self
     }
 
-    pub fn with_json_schema_validator(
-        mut self,
-        validator: Arc<dyn JsonSchemaValidator>,
-    ) -> Self {
+    pub fn with_json_schema_validator(mut self, validator: Arc<dyn JsonSchemaValidator>) -> Self {
         self.json_schema_validator = Some(validator);
+        self
+    }
+
+    pub fn with_roots(mut self, roots: Vec<mcp_core::types::Root>) -> Self {
+        self.roots = Some(roots);
         self
     }
 }

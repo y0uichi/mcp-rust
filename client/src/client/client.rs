@@ -1,16 +1,19 @@
 use std::collections::HashMap;
-use std::sync::mpsc::{Sender, channel};
 use std::sync::Arc;
+use std::sync::mpsc::{Sender, channel};
 use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
 
+use mcp_core::stdio::Transport;
 use mcp_core::{
     protocol::Protocol,
     stdio::JsonRpcMessage,
-    types::{MessageId, NotificationMessage, RequestMessage},
+    types::{
+        ErrorCode, ErrorObject, ListRootsResult, MessageId, NotificationMessage, RequestMessage,
+        ResultMessage,
+    },
 };
-use mcp_core::stdio::Transport;
 
 use crate::client::{
     ClientCapabilities, ClientError, ClientOptions, Implementation, InitializeResult,
@@ -36,6 +39,7 @@ where
     list_changed_due: HashMap<ListChangedKind, Instant>,
     list_changed_pending: HashMap<MessageId, ListChangedKind>,
     tool_cache: ToolCache,
+    roots: Vec<mcp_core::types::Root>,
     server_capabilities: Option<ServerCapabilities>,
     server_info: Option<Implementation>,
     instructions: Option<String>,
@@ -53,11 +57,15 @@ where
 {
     /// Create a new client instance with the provided transport and options.
     pub fn new(transport: T, options: ClientOptions) -> Self {
-        let capabilities = options.capabilities.clone().unwrap_or_default();
+        let mut capabilities = options.capabilities.clone().unwrap_or_default();
+        if capabilities.roots.is_none() && options.roots.is_some() {
+            capabilities.roots = Some(crate::client::RootsCapability::default());
+        }
         let json_schema_validator = options
             .json_schema_validator
             .clone()
             .unwrap_or_else(|| Arc::new(NoopJsonSchemaValidator::default()));
+        let roots = options.roots.clone().unwrap_or_default();
 
         Self {
             protocol: Protocol::default(),
@@ -70,6 +78,7 @@ where
             list_changed_due: HashMap::new(),
             list_changed_pending: HashMap::new(),
             tool_cache: ToolCache::default(),
+            roots,
             server_capabilities: None,
             server_info: None,
             instructions: None,
@@ -82,8 +91,41 @@ where
         }
     }
 
+    fn handle_incoming_request(
+        &mut self,
+        request: RequestMessage,
+    ) -> Result<(), ClientError<T::Error>> {
+        match request.method.as_str() {
+            "roots/list" => {
+                let result = ListRootsResult {
+                    roots: self.roots.clone(),
+                };
+                let payload = serde_json::to_value(result).map_err(ClientError::Serialization)?;
+                let response = ResultMessage::success(request.id.clone(), payload);
+                self.transport
+                    .send(&JsonRpcMessage::Result(response))
+                    .map_err(ClientError::Transport)?;
+            }
+            _ => {
+                let error = ErrorObject::new(
+                    ErrorCode::MethodNotFound as i32,
+                    format!("unknown client method: {}", request.method),
+                    None,
+                );
+                let response = ResultMessage::failure(request.id.clone(), error);
+                self.transport
+                    .send(&JsonRpcMessage::Result(response))
+                    .map_err(ClientError::Transport)?;
+            }
+        }
+        Ok(())
+    }
+
     /// Register client capabilities before connecting.
-    pub fn register_capabilities(&mut self, capabilities: ClientCapabilities) -> Result<(), ClientError<T::Error>> {
+    pub fn register_capabilities(
+        &mut self,
+        capabilities: ClientCapabilities,
+    ) -> Result<(), ClientError<T::Error>> {
         if self.connected {
             return Err(ClientError::Capability(
                 "cannot register capabilities after connect".to_string(),
@@ -155,7 +197,7 @@ where
                 self.flush_debounced_list_changed();
                 Ok(())
             }
-            _ => Ok(()),
+            JsonRpcMessage::Request(request) => self.handle_incoming_request(request),
         }
     }
 
@@ -175,13 +217,18 @@ where
     }
 
     /// Send a plain request message through the transport.
-    pub fn send_request(&mut self, method: impl Into<String>, params: Value) -> Result<MessageId, ClientError<T::Error>> {
+    pub fn send_request(
+        &mut self,
+        method: impl Into<String>,
+        params: Value,
+    ) -> Result<MessageId, ClientError<T::Error>> {
         let method = method.into();
         self.assert_capability_for_method(&method)?;
 
         let request = RequestMessage::new(self.next_message_id(), method, params);
         let id = request.id.clone();
-        self.pending_requests.insert(id.clone(), request.method.clone());
+        self.pending_requests
+            .insert(id.clone(), request.method.clone());
         self.transport.send(&JsonRpcMessage::Request(request))?;
         Ok(id)
     }
@@ -223,7 +270,11 @@ where
     }
 
     /// Send a tools/call request.
-    pub fn call_tool(&mut self, name: impl Into<String>, arguments: Value) -> Result<MessageId, ClientError<T::Error>> {
+    pub fn call_tool(
+        &mut self,
+        name: impl Into<String>,
+        arguments: Value,
+    ) -> Result<MessageId, ClientError<T::Error>> {
         let name = name.into();
         if self.tool_cache.is_task_required(&name) {
             return Err(ClientError::Capability(format!(
@@ -253,23 +304,37 @@ where
     }
 
     /// Request task status by task id.
-    pub fn get_task(&mut self, task_id: impl Into<String>) -> Result<MessageId, ClientError<T::Error>> {
+    pub fn get_task(
+        &mut self,
+        task_id: impl Into<String>,
+    ) -> Result<MessageId, ClientError<T::Error>> {
         self.send_request("tasks/get", json!({ "taskId": task_id.into() }))
     }
 
     /// Request task result by task id.
-    pub fn get_task_result(&mut self, task_id: impl Into<String>) -> Result<MessageId, ClientError<T::Error>> {
+    pub fn get_task_result(
+        &mut self,
+        task_id: impl Into<String>,
+    ) -> Result<MessageId, ClientError<T::Error>> {
         self.send_request("tasks/result", json!({ "taskId": task_id.into() }))
     }
 
     /// List tasks with optional cursor.
-    pub fn list_tasks(&mut self, cursor: Option<String>) -> Result<MessageId, ClientError<T::Error>> {
-        let params = cursor.map(|cursor| json!({ "cursor": cursor })).unwrap_or_else(|| json!({}));
+    pub fn list_tasks(
+        &mut self,
+        cursor: Option<String>,
+    ) -> Result<MessageId, ClientError<T::Error>> {
+        let params = cursor
+            .map(|cursor| json!({ "cursor": cursor }))
+            .unwrap_or_else(|| json!({}));
         self.send_request("tasks/list", params)
     }
 
     /// Cancel a running task.
-    pub fn cancel_task(&mut self, task_id: impl Into<String>) -> Result<MessageId, ClientError<T::Error>> {
+    pub fn cancel_task(
+        &mut self,
+        task_id: impl Into<String>,
+    ) -> Result<MessageId, ClientError<T::Error>> {
         self.send_request("tasks/cancel", json!({ "taskId": task_id.into() }))
     }
 
@@ -302,7 +367,10 @@ where
         MessageId::Number(id)
     }
 
-    fn handle_initialize_result(&mut self, result: mcp_core::types::ResultMessage) -> Result<(), ClientError<T::Error>> {
+    fn handle_initialize_result(
+        &mut self,
+        result: mcp_core::types::ResultMessage,
+    ) -> Result<(), ClientError<T::Error>> {
         if let Some(error) = result.error {
             return Err(ClientError::Initialization(error.message));
         }
@@ -311,7 +379,8 @@ where
             ClientError::Initialization("initialize returned empty result".to_string())
         })?;
 
-        let init: InitializeResult = serde_json::from_value(payload).map_err(ClientError::Serialization)?;
+        let init: InitializeResult =
+            serde_json::from_value(payload).map_err(ClientError::Serialization)?;
         if init.protocol_version != self.options.protocol_version {
             return Err(ClientError::Initialization(format!(
                 "unsupported protocol version: {}",
@@ -355,16 +424,30 @@ where
         }
     }
 
-    fn handle_tools_list(&mut self, id: MessageId, payload: Value) -> Result<(), ClientError<T::Error>> {
-        let list: ToolListResult = serde_json::from_value(payload).map_err(ClientError::Serialization)?;
+    fn handle_tools_list(
+        &mut self,
+        id: MessageId,
+        payload: Value,
+    ) -> Result<(), ClientError<T::Error>> {
+        let list: ToolListResult =
+            serde_json::from_value(payload).map_err(ClientError::Serialization)?;
         self.tool_cache.update(&list.tools);
 
-        self.handle_list_changed_items(id, ListChangedKind::Tools, serde_json::json!({ "tools": list.tools }))?;
+        self.handle_list_changed_items(
+            id,
+            ListChangedKind::Tools,
+            serde_json::json!({ "tools": list.tools }),
+        )?;
         Ok(())
     }
 
-    fn handle_tool_call(&mut self, id: MessageId, payload: Value) -> Result<(), ClientError<T::Error>> {
-        let result: ToolCallResult = serde_json::from_value(payload).map_err(ClientError::Serialization)?;
+    fn handle_tool_call(
+        &mut self,
+        id: MessageId,
+        payload: Value,
+    ) -> Result<(), ClientError<T::Error>> {
+        let result: ToolCallResult =
+            serde_json::from_value(payload).map_err(ClientError::Serialization)?;
         if result.is_error.unwrap_or(false) {
             return Ok(());
         }
@@ -386,9 +469,15 @@ where
         Ok(())
     }
 
-    fn handle_prompts_list(&mut self, id: MessageId, payload: Value) -> Result<(), ClientError<T::Error>> {
-        let list: PromptListResult = serde_json::from_value(payload).map_err(ClientError::Serialization)?;
-        let prompts_value = serde_json::to_value(list.prompts).map_err(ClientError::Serialization)?;
+    fn handle_prompts_list(
+        &mut self,
+        id: MessageId,
+        payload: Value,
+    ) -> Result<(), ClientError<T::Error>> {
+        let list: PromptListResult =
+            serde_json::from_value(payload).map_err(ClientError::Serialization)?;
+        let prompts_value =
+            serde_json::to_value(list.prompts).map_err(ClientError::Serialization)?;
         self.handle_list_changed_items(
             id,
             ListChangedKind::Prompts,
@@ -397,9 +486,15 @@ where
         Ok(())
     }
 
-    fn handle_resources_list(&mut self, id: MessageId, payload: Value) -> Result<(), ClientError<T::Error>> {
-        let list: ResourceListResult = serde_json::from_value(payload).map_err(ClientError::Serialization)?;
-        let resources_value = serde_json::to_value(list.resources).map_err(ClientError::Serialization)?;
+    fn handle_resources_list(
+        &mut self,
+        id: MessageId,
+        payload: Value,
+    ) -> Result<(), ClientError<T::Error>> {
+        let list: ResourceListResult =
+            serde_json::from_value(payload).map_err(ClientError::Serialization)?;
+        let resources_value =
+            serde_json::to_value(list.resources).map_err(ClientError::Serialization)?;
         self.handle_list_changed_items(
             id,
             ListChangedKind::Resources,
@@ -408,18 +503,33 @@ where
         Ok(())
     }
 
-    fn handle_tasks_list(&mut self, _id: MessageId, payload: Value) -> Result<(), ClientError<T::Error>> {
-        let _list: TaskListResult = serde_json::from_value(payload).map_err(ClientError::Serialization)?;
+    fn handle_tasks_list(
+        &mut self,
+        _id: MessageId,
+        payload: Value,
+    ) -> Result<(), ClientError<T::Error>> {
+        let _list: TaskListResult =
+            serde_json::from_value(payload).map_err(ClientError::Serialization)?;
         Ok(())
     }
 
-    fn handle_task_get(&mut self, _id: MessageId, payload: Value) -> Result<(), ClientError<T::Error>> {
-        let _task: TaskGetResult = serde_json::from_value(payload).map_err(ClientError::Serialization)?;
+    fn handle_task_get(
+        &mut self,
+        _id: MessageId,
+        payload: Value,
+    ) -> Result<(), ClientError<T::Error>> {
+        let _task: TaskGetResult =
+            serde_json::from_value(payload).map_err(ClientError::Serialization)?;
         Ok(())
     }
 
-    fn handle_task_result(&mut self, _id: MessageId, payload: Value) -> Result<(), ClientError<T::Error>> {
-        let _result: TaskResult = serde_json::from_value(payload).map_err(ClientError::Serialization)?;
+    fn handle_task_result(
+        &mut self,
+        _id: MessageId,
+        payload: Value,
+    ) -> Result<(), ClientError<T::Error>> {
+        let _result: TaskResult =
+            serde_json::from_value(payload).map_err(ClientError::Serialization)?;
         Ok(())
     }
 
@@ -481,7 +591,9 @@ where
             ListChangedKind::Resources => self.list_changed_handlers.resources.clone(),
         };
 
-        let Some(options) = handler else { return; };
+        let Some(options) = handler else {
+            return;
+        };
         if let Some(debounce_ms) = options.debounce_ms {
             self.list_changed_due
                 .insert(kind, Instant::now() + Duration::from_millis(debounce_ms));
@@ -597,10 +709,9 @@ where
     }
 
     fn assert_capability_for_method(&self, method: &str) -> Result<(), ClientError<T::Error>> {
-        let server = self
-            .server_capabilities
-            .as_ref()
-            .ok_or_else(|| ClientError::Capability("server capabilities unavailable".to_string()))?;
+        let server = self.server_capabilities.as_ref().ok_or_else(|| {
+            ClientError::Capability("server capabilities unavailable".to_string())
+        })?;
 
         match method {
             "logging/setLevel" => {
@@ -617,7 +728,11 @@ where
                     )));
                 }
             }
-            "resources/list" | "resources/templates/list" | "resources/read" | "resources/subscribe" | "resources/unsubscribe" => {
+            "resources/list"
+            | "resources/templates/list"
+            | "resources/read"
+            | "resources/subscribe"
+            | "resources/unsubscribe" => {
                 let resources = server.resources.as_ref().ok_or_else(|| {
                     ClientError::Capability(format!(
                         "server does not support resources (required for {method})",

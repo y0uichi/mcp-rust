@@ -2,7 +2,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use super::{MessageId, JSONRPC_VERSION};
+use super::{JSONRPC_VERSION, MessageId};
 
 /// JSON-RPC 2.0 style request payload.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]

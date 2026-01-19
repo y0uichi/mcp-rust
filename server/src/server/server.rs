@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use futures::future::BoxFuture;
-use serde_json::Value;
 use schemars::schema::RootSchema;
+use serde_json::Value;
 
 use mcp_core::protocol::{
     NotificationContext, NotificationHandler, Protocol, ProtocolError, RequestContext,
@@ -11,12 +11,13 @@ use mcp_core::protocol::{
 };
 use mcp_core::schema::JsonSchemaValidator;
 use mcp_core::types::{
-    CancelTaskRequestParams, CancelTaskResult, CapabilityFlag, ClientCapabilities,
-    GetTaskPayloadRequestParams, GetTaskRequestParams, GetTaskResult, InitializeRequestParams,
-    InitializeResult, ListTasksResult, NotificationMessage, PaginatedRequestParams, PaginatedResult,
-    RequestMessage, ResultMessage, ServerCapabilities, ServerTasksCapability,
-    ServerTasksRequestCapabilities, ServerTasksToolCapabilities, SetLevelRequestParams,
-    SUPPORTED_PROTOCOL_VERSIONS, Task, TaskStatusNotificationParams, ErrorCode, ErrorObject,
+    CancelTaskRequestParams, CancelTaskResult, CapabilityFlag, ClientCapabilities, ErrorCode,
+    ErrorObject, GetTaskPayloadRequestParams, GetTaskRequestParams, GetTaskResult,
+    InitializeRequestParams, InitializeResult, ListTasksResult, NotificationMessage,
+    PaginatedRequestParams, PaginatedResult, RequestMessage, ResultMessage,
+    SUPPORTED_PROTOCOL_VERSIONS, ServerCapabilities, ServerTasksCapability,
+    ServerTasksRequestCapabilities, ServerTasksToolCapabilities, SetLevelRequestParams, Task,
+    TaskStatusNotificationParams,
 };
 
 use crate::server::handlers::{NotificationHandlerFn, RequestHandlerFn};
@@ -54,9 +55,8 @@ impl Server {
             .as_ref()
             .and_then(|opts| opts.task_store.clone());
 
-        protocol.set_capability_checker(Some(Arc::new(ServerCapabilityChecker::new(
-            state.clone(),
-        ))));
+        protocol
+            .set_capability_checker(Some(Arc::new(ServerCapabilityChecker::new(state.clone()))));
 
         let on_initialized = Arc::new(Mutex::new(None));
 
@@ -81,7 +81,10 @@ impl Server {
         *self.on_initialized.lock().expect("init callback") = callback;
     }
 
-    pub fn register_capabilities(&mut self, capabilities: ServerCapabilities) -> Result<(), ServerError> {
+    pub fn register_capabilities(
+        &mut self,
+        capabilities: ServerCapabilities,
+    ) -> Result<(), ServerError> {
         let mut state = self.state.lock().expect("server state");
         if state.capabilities_locked {
             return Err(ServerError::CapabilitiesLocked);
@@ -94,7 +97,11 @@ impl Server {
     }
 
     pub fn get_capabilities(&self) -> ServerCapabilities {
-        self.state.lock().expect("server state").capabilities.clone()
+        self.state
+            .lock()
+            .expect("server state")
+            .capabilities
+            .clone()
     }
 
     pub fn get_client_capabilities(&self) -> Option<ClientCapabilities> {
@@ -168,7 +175,8 @@ impl Server {
     ) where
         H: RequestHandler,
     {
-        self.protocol.register_request_handler(method, schema, handler);
+        self.protocol
+            .register_request_handler(method, schema, handler);
     }
 
     pub fn register_notification_handler<H>(
@@ -179,14 +187,17 @@ impl Server {
     ) where
         H: NotificationHandler,
     {
-        self.protocol.register_notification_handler(method, schema, handler);
+        self.protocol
+            .register_notification_handler(method, schema, handler);
     }
 
     fn register_initialize_handlers(&mut self) {
         let state = self.state.clone();
         let server_info = self.server_info.clone();
         let handler = RequestHandlerFn::new(
-            move |request: &RequestMessage, _context: &RequestContext| -> BoxFuture<'static, Result<Value, ProtocolError>> {
+            move |request: &RequestMessage,
+                  _context: &RequestContext|
+                  -> BoxFuture<'static, Result<Value, ProtocolError>> {
                 let state = state.clone();
                 let server_info = server_info.clone();
                 let params_value = request.params.clone();
@@ -227,7 +238,9 @@ impl Server {
 
         let on_initialized = self.on_initialized.clone();
         let notification_handler = NotificationHandlerFn::new(
-            move |_notification: &NotificationMessage, _context: &NotificationContext| -> BoxFuture<'static, Result<(), ProtocolError>> {
+            move |_notification: &NotificationMessage,
+                  _context: &NotificationContext|
+                  -> BoxFuture<'static, Result<(), ProtocolError>> {
                 let on_initialized = on_initialized.clone();
                 Box::pin(async move {
                     if let Some(callback) = on_initialized.lock().expect("init callback").as_ref() {
@@ -249,14 +262,22 @@ impl Server {
         if self.logging_handler_registered {
             return;
         }
-        let logging_enabled = self.state.lock().expect("server state").capabilities.logging.is_some();
+        let logging_enabled = self
+            .state
+            .lock()
+            .expect("server state")
+            .capabilities
+            .logging
+            .is_some();
         if !logging_enabled {
             return;
         }
 
         let state = self.state.clone();
         let handler = RequestHandlerFn::new(
-            move |request: &RequestMessage, context: &RequestContext| -> BoxFuture<'static, Result<Value, ProtocolError>> {
+            move |request: &RequestMessage,
+                  context: &RequestContext|
+                  -> BoxFuture<'static, Result<Value, ProtocolError>> {
                 let state = state.clone();
                 let params_value = request.params.clone();
                 let context = context.clone();
@@ -292,7 +313,9 @@ impl Server {
 
         let store_for_get = task_store.clone();
         let get_handler = RequestHandlerFn::new(
-            move |request: &RequestMessage, _context: &RequestContext| -> BoxFuture<'static, Result<Value, ProtocolError>> {
+            move |request: &RequestMessage,
+                  _context: &RequestContext|
+                  -> BoxFuture<'static, Result<Value, ProtocolError>> {
                 let store = store_for_get.clone();
                 let params_value = request.params.clone();
                 Box::pin(async move {
@@ -315,7 +338,9 @@ impl Server {
 
         let store_for_list = task_store.clone();
         let list_handler = RequestHandlerFn::new(
-            move |request: &RequestMessage, _context: &RequestContext| -> BoxFuture<'static, Result<Value, ProtocolError>> {
+            move |request: &RequestMessage,
+                  _context: &RequestContext|
+                  -> BoxFuture<'static, Result<Value, ProtocolError>> {
                 let store = store_for_list.clone();
                 let params_value = request.params.clone();
                 Box::pin(async move {
@@ -345,15 +370,20 @@ impl Server {
 
         let store_for_result = task_store.clone();
         let result_handler = RequestHandlerFn::new(
-            move |request: &RequestMessage, _context: &RequestContext| -> BoxFuture<'static, Result<Value, ProtocolError>> {
+            move |request: &RequestMessage,
+                  _context: &RequestContext|
+                  -> BoxFuture<'static, Result<Value, ProtocolError>> {
                 let store = store_for_result.clone();
                 let params_value = request.params.clone();
                 Box::pin(async move {
                     let params: GetTaskPayloadRequestParams = serde_json::from_value(params_value)?;
-                    let result = store
-                        .get_task_result(&params.task_id)
-                        .await?
-                        .ok_or_else(|| ProtocolError::Handler("task result not available".to_string()))?;
+                    let result =
+                        store
+                            .get_task_result(&params.task_id)
+                            .await?
+                            .ok_or_else(|| {
+                                ProtocolError::Handler("task result not available".to_string())
+                            })?;
                     match result {
                         Ok(value) => Ok(value),
                         Err(error) => Err(ProtocolError::Handler(error.message)),
@@ -370,7 +400,9 @@ impl Server {
 
         let store_for_cancel = task_store.clone();
         let cancel_handler = RequestHandlerFn::new(
-            move |request: &RequestMessage, _context: &RequestContext| -> BoxFuture<'static, Result<Value, ProtocolError>> {
+            move |request: &RequestMessage,
+                  _context: &RequestContext|
+                  -> BoxFuture<'static, Result<Value, ProtocolError>> {
                 let store = store_for_cancel.clone();
                 let params_value = request.params.clone();
                 Box::pin(async move {
@@ -418,41 +450,31 @@ fn map_protocol_error(error: ProtocolError) -> ErrorObject {
             format!("unknown method: {method}"),
             None,
         ),
-        ProtocolError::Validation(err) => ErrorObject::new(
-            ErrorCode::InvalidParams as i32,
-            err.to_string(),
-            None,
-        ),
-        ProtocolError::Timeout => ErrorObject::new(
-            ErrorCode::RequestTimeout as i32,
-            "request timed out",
-            None,
-        ),
+        ProtocolError::Validation(err) => {
+            ErrorObject::new(ErrorCode::InvalidParams as i32, err.to_string(), None)
+        }
+        ProtocolError::Timeout => {
+            ErrorObject::new(ErrorCode::RequestTimeout as i32, "request timed out", None)
+        }
         ProtocolError::Cancelled => ErrorObject::new(
             ErrorCode::ConnectionClosed as i32,
             "request cancelled",
             None,
         ),
-        ProtocolError::Capability(message) => ErrorObject::new(
-            ErrorCode::InvalidRequest as i32,
-            message,
-            None,
-        ),
+        ProtocolError::Capability(message) => {
+            ErrorObject::new(ErrorCode::InvalidRequest as i32, message, None)
+        }
         ProtocolError::TaskUnsupported => ErrorObject::new(
             ErrorCode::InvalidRequest as i32,
             "task support not available",
             None,
         ),
-        ProtocolError::Handler(message) => ErrorObject::new(
-            ErrorCode::InternalError as i32,
-            message,
-            None,
-        ),
-        ProtocolError::Serialization(err) => ErrorObject::new(
-            ErrorCode::InternalError as i32,
-            err.to_string(),
-            None,
-        ),
+        ProtocolError::Handler(message) => {
+            ErrorObject::new(ErrorCode::InternalError as i32, message, None)
+        }
+        ProtocolError::Serialization(err) => {
+            ErrorObject::new(ErrorCode::InternalError as i32, err.to_string(), None)
+        }
     }
 }
 
@@ -471,8 +493,15 @@ fn merge_server_capabilities(
     }
 }
 
-fn merge_flag(current: Option<CapabilityFlag>, updates: Option<CapabilityFlag>) -> Option<CapabilityFlag> {
-    if updates.is_some() { Some(CapabilityFlag::default()) } else { current }
+fn merge_flag(
+    current: Option<CapabilityFlag>,
+    updates: Option<CapabilityFlag>,
+) -> Option<CapabilityFlag> {
+    if updates.is_some() {
+        Some(CapabilityFlag::default())
+    } else {
+        current
+    }
 }
 
 fn merge_bool(current: Option<bool>, updates: Option<bool>) -> Option<bool> {
@@ -491,7 +520,10 @@ fn merge_prompt_capabilities(
 ) -> Option<mcp_core::types::PromptCapabilities> {
     match (current, updates) {
         (_, Some(update)) => Some(mcp_core::types::PromptCapabilities {
-            list_changed: merge_bool(current.as_ref().and_then(|c| c.list_changed), update.list_changed),
+            list_changed: merge_bool(
+                current.as_ref().and_then(|c| c.list_changed),
+                update.list_changed,
+            ),
         }),
         (Some(existing), None) => Some(existing.clone()),
         (None, None) => None,
@@ -504,7 +536,10 @@ fn merge_tool_capabilities(
 ) -> Option<mcp_core::types::ToolCapabilities> {
     match (current, updates) {
         (_, Some(update)) => Some(mcp_core::types::ToolCapabilities {
-            list_changed: merge_bool(current.as_ref().and_then(|c| c.list_changed), update.list_changed),
+            list_changed: merge_bool(
+                current.as_ref().and_then(|c| c.list_changed),
+                update.list_changed,
+            ),
         }),
         (Some(existing), None) => Some(existing.clone()),
         (None, None) => None,
@@ -518,7 +553,10 @@ fn merge_resource_capabilities(
     match (current, updates) {
         (_, Some(update)) => Some(mcp_core::types::ResourceCapabilities {
             subscribe: merge_bool(current.as_ref().and_then(|c| c.subscribe), update.subscribe),
-            list_changed: merge_bool(current.as_ref().and_then(|c| c.list_changed), update.list_changed),
+            list_changed: merge_bool(
+                current.as_ref().and_then(|c| c.list_changed),
+                update.list_changed,
+            ),
         }),
         (Some(existing), None) => Some(existing.clone()),
         (None, None) => None,

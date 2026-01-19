@@ -16,7 +16,11 @@ impl ServerCapabilityChecker {
     }
 
     fn capabilities(&self) -> ServerCapabilities {
-        self.state.lock().expect("server state").capabilities.clone()
+        self.state
+            .lock()
+            .expect("server state")
+            .capabilities
+            .clone()
     }
 }
 

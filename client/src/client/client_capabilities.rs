@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::client::{CapabilityFlag, ClientTasksCapability, ElicitationCapability, RootsCapability};
+use crate::client::{
+    CapabilityFlag, ClientTasksCapability, ElicitationCapability, RootsCapability,
+};
 
 /// Flags describing what the client can do.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq)]
@@ -20,7 +22,10 @@ impl ClientCapabilities {
         ClientCapabilities {
             roots: other.roots.clone().or_else(|| self.roots.clone()),
             sampling: other.sampling.clone().or_else(|| self.sampling.clone()),
-            elicitation: other.elicitation.clone().or_else(|| self.elicitation.clone()),
+            elicitation: other
+                .elicitation
+                .clone()
+                .or_else(|| self.elicitation.clone()),
             tasks: other.tasks.clone().or_else(|| self.tasks.clone()),
         }
     }

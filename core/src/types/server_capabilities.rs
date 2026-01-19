@@ -3,7 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use super::{
-    CapabilityFlag, PromptCapabilities, ResourceCapabilities, ServerTasksCapability, ToolCapabilities,
+    CapabilityFlag, PromptCapabilities, ResourceCapabilities, ServerTasksCapability,
+    ToolCapabilities,
 };
 
 /// Capabilities that a server may support.

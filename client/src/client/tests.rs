@@ -204,7 +204,7 @@ fn list_changed_debounce_delays_refresh() {
     let transport = MockTransport::new(Rc::clone(&history));
 
     let mut handlers = ListChangedHandlers::default();
-    handlers.tools = Some(ListChangedOptions::new(|_result| {} ).with_debounce_ms(20));
+    handlers.tools = Some(ListChangedOptions::new(|_result| {}).with_debounce_ms(20));
 
     let mut client = Client::new(
         transport,
@@ -457,6 +457,8 @@ fn task_requests_require_tasks_capability() {
         .handle_message(JsonRpcMessage::Result(response))
         .unwrap();
 
-    let err = client.get_task("task-1").expect_err("tasks should be unsupported");
+    let err = client
+        .get_task("task-1")
+        .expect_err("tasks should be unsupported");
     assert!(matches!(err, ClientError::Capability(_)));
 }
