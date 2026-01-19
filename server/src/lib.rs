@@ -1,9 +1,24 @@
 pub mod http;
 pub mod server;
+pub mod websocket;
 
 pub use server::{InMemoryTaskStore, McpServer, Server, ServerError, ServerOptions};
 
 pub use http::{
-    HttpResponse, HttpServerError, HttpServerHandler, HttpServerOptions, RequestHeaders,
+    BufferedEvent, EventBuffer, EventBufferConfig, HttpResponse, HttpServerError,
+    HttpServerHandler, HttpServerOptions, LegacySseConfig, LegacySseState, RequestHeaders,
     SessionConfig, SessionManager, SessionState, SseResponseBuilder, SseWriter,
+    generate_session_id,
 };
+
+#[cfg(feature = "tokio")]
+pub use http::SseBroadcaster;
+
+#[cfg(feature = "axum")]
+pub use http::axum_handler::{AxumHandlerConfig, AxumHandlerState, create_router};
+
+#[cfg(feature = "axum")]
+pub use http::create_legacy_sse_router;
+
+#[cfg(feature = "websocket")]
+pub use websocket::{WebSocketConfig, WebSocketError, WebSocketState, create_websocket_router, handle_websocket};

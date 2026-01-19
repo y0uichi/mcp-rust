@@ -8,4 +8,6 @@ members = [
     "examples/mcp-filesystem-server",
     "examples/http-client",
     "examples/http-server",
+    "examples/websocket-server",
+    "examples/sse-compat-server",
 ]

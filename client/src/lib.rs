@@ -2,6 +2,7 @@
 pub mod client;
 pub mod http;
 pub mod stdio;
+pub mod websocket;
 
 pub use stdio::{
     DEFAULT_INHERITED_ENV_VARS, JsonRpcMessage, ReadBuffer, StdioClientTransport,
@@ -11,4 +12,10 @@ pub use stdio::{
 
 pub use client::{Client, ClientCapabilities, ClientError, ClientOptions};
 
-pub use http::{HttpClientConfig, HttpClientError, HttpClientTransport, ReconnectOptions};
+pub use http::{
+    HttpClientConfig, HttpClientError, HttpClientTransport, LegacySseClientConfig,
+    LegacySseClientTransport, ReconnectOptions,
+};
+
+#[cfg(feature = "websocket")]
+pub use websocket::{WebSocketClientError, WebSocketClientTransport};

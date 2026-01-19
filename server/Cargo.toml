@@ -15,7 +15,8 @@ time = { version = "0.3", features = ["formatting"] }
 
 [features]
 default = []
-axum = ["dep:axum", "dep:tower", "dep:tower-http", "tokio"]
+axum = ["dep:axum", "dep:tower", "dep:tower-http", "dep:async-stream", "tokio"]
+websocket = ["axum", "tokio"]
 tokio = ["dep:tokio", "dep:tokio-stream"]
 
 [dependencies.tokio]
@@ -25,14 +26,21 @@ optional = true
 
 [dependencies.tokio-stream]
 version = "0.1"
+features = ["sync"]
+optional = true
+
+[dependencies.async-stream]
+version = "0.3"
 optional = true
 
 [dependencies.axum]
 version = "0.7"
+features = ["ws"]
 optional = true
 
 [dependencies.tower]
-version = "0.4"
+version = "0.5"
+features = ["util"]
 optional = true
 
 [dependencies.tower-http]

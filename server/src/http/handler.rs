@@ -194,7 +194,7 @@ impl HttpServerHandler {
     pub fn handle_get(
         &self,
         session_id_header: Option<&str>,
-        last_event_id: Option<&str>,
+        _last_event_id: Option<&str>,
         accept: Option<&str>,
     ) -> HttpResponse {
         // Check if SSE is enabled
@@ -227,7 +227,7 @@ impl HttpServerHandler {
         };
 
         let session_id = session.session_id.to_string();
-        let session_manager = Arc::clone(&self.session_manager);
+        let _session_manager = Arc::clone(&self.session_manager);
         let endpoint_url = self.endpoint_url();
 
         // Return SSE response
