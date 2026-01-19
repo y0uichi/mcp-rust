@@ -26,6 +26,7 @@ use mcp_core::stdio::{deserialize_message, serialize_message, JsonRpcMessage};
 
 use super::broadcast::async_broadcast::SseBroadcaster;
 use super::broadcast::EventBufferConfig;
+use super::dns_protection::{DnsProtectionConfig, DnsProtectionLayer};
 use super::error::HttpServerError;
 use super::session_manager::{SessionConfig, SessionManager, SessionState};
 use crate::server::McpServer;
@@ -47,6 +48,13 @@ pub struct AxumHandlerConfig {
     pub broadcast_capacity: usize,
     /// Enable CORS.
     pub enable_cors: bool,
+    /// Enable DNS rebinding protection.
+    /// When enabled, the server validates the Host header against allowed hostnames.
+    pub enable_dns_rebinding_protection: bool,
+    /// DNS protection configuration.
+    /// If `enable_dns_rebinding_protection` is true and this is None,
+    /// localhost-only protection is used by default.
+    pub dns_protection_config: Option<DnsProtectionConfig>,
 }
 
 impl Default for AxumHandlerConfig {
@@ -59,6 +67,8 @@ impl Default for AxumHandlerConfig {
             keep_alive_interval: Duration::from_secs(30),
             broadcast_capacity: 100,
             enable_cors: true,
+            enable_dns_rebinding_protection: false,
+            dns_protection_config: None,
         }
     }
 }
@@ -159,6 +169,16 @@ pub fn create_router(state: Arc<AxumHandlerState>) -> Router {
         .route(&state.config.endpoint_path, get(handle_get))
         .route(&state.config.endpoint_path, delete(handle_delete))
         .with_state(state.clone());
+
+    // Apply DNS rebinding protection if enabled
+    if state.config.enable_dns_rebinding_protection {
+        let dns_config = state
+            .config
+            .dns_protection_config
+            .clone()
+            .unwrap_or_else(DnsProtectionConfig::localhost);
+        router = router.layer(DnsProtectionLayer::new(dns_config));
+    }
 
     if state.config.enable_cors {
         router = router.layer(

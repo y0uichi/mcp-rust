@@ -834,12 +834,55 @@ dependencies = [
 ]
 
 [[package]]
+name = "mcp-logging-server"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "mcp_core",
+ "mcp_server",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "mcp-prompts-server"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "mcp_core",
+ "mcp_server",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "mcp-sse-compat-server"
 version = "0.1.0"
 dependencies = [
  "axum",
  "mcp_core",
  "mcp_server",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "mcp-tasks-server"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "mcp_core",
+ "mcp_server",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "mcp-websocket-client"
+version = "0.1.0"
+dependencies = [
+ "mcp_client",
+ "mcp_core",
  "serde_json",
  "tokio",
 ]
@@ -859,15 +902,19 @@ dependencies = [
 name = "mcp_client"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
+ "base64",
  "futures-util",
  "mcp_core",
  "serde",
  "serde_json",
+ "sha2",
  "thiserror",
  "tokio",
  "tokio-stream",
  "tokio-tungstenite",
  "ureq",
+ "url",
 ]
 
 [[package]]
@@ -892,17 +939,21 @@ dependencies = [
  "async-stream",
  "async-trait",
  "axum",
+ "base64",
  "futures",
  "mcp_core",
  "schemars",
  "serde",
  "serde_json",
+ "sha2",
  "thiserror",
  "time",
  "tokio",
  "tokio-stream",
  "tower",
  "tower-http 0.5.2",
+ "url",
+ "uuid",
 ]
 
 [[package]]
@@ -1441,6 +1492,17 @@ name = "sha1"
 version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3bf829a2d51ab4a5ddf1352d8470c140cadc8301b2ae1789db023f01cedd6ba"
+dependencies = [
+ "cfg-if",
+ "cpufeatures",
+ "digest",
+]
+
+[[package]]
+name = "sha2"
+version = "0.10.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a7507d819769d01a365ab707794a4084392c824f54a7a6a7862f8c3d0892b283"
 dependencies = [
  "cfg-if",
  "cpufeatures",

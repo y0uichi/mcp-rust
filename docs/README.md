@@ -24,7 +24,7 @@
 | 旧版 SSE 兼容传输 | ✅ 完成 |
 | Tools/Resources/Prompts | ✅ 完成 |
 | Tasks API | ✅ 完成 |
-| OAuth/DNS 保护 | ❌ 未开始 |
+| OAuth/DNS 保护 | ✅ 完成 |
 | Sampling/Elicitation | ❌ 未开始 |
 
 ## 快速开始

@@ -6,6 +6,19 @@
 
 ### 新增
 
+- **OAuth/DNS 保护** (2026-01-19)
+  - DNS 重绑定保护中间件（`DnsProtectionLayer`、`host_header_validation`）
+  - OAuth 2.1 核心类型定义（`OAuthMetadata`、`OAuthTokens` 等）
+  - 服务端 OAuth 路由（authorize/token/register/revoke/metadata）
+  - Bearer Token 认证中间件（`BearerAuthLayer`）
+  - 客户端认证中间件（`ClientAuthLayer`）
+  - 客户端 OAuth Provider trait 和实现
+  - OAuth 元数据发现（RFC 8414、RFC 9728）
+  - PKCE 支持（S256）
+  - Token 刷新
+  - 动态客户端注册（RFC 7591）
+  - HTTP 传输层 OAuth 集成
+
 - **HTTP/SSE 传输完整实现** (2026-01-19)
   - 真正的 SSE 长连接流（使用 axum）
   - 双向消息推送（`SseBroadcaster`）
@@ -64,7 +77,5 @@
 详见 [状态总览](./status.md) 了解与 TypeScript SDK 的功能对比。
 
 主要未实现的功能：
-- OAuth 授权
-- DNS 重绑定保护
 - Sampling/Elicitation
-- WebSocket 传输
+- Completions

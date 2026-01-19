@@ -9,5 +9,9 @@ members = [
     "examples/http-client",
     "examples/http-server",
     "examples/websocket-server",
+    "examples/websocket-client",
     "examples/sse-compat-server",
+    "examples/prompts-server",
+    "examples/tasks-server",
+    "examples/logging-server",
 ]

@@ -3,6 +3,7 @@
 //! by exposing configuration helpers, transport-neutral types, schema validation,
 //! and a lightweight protocol runtime.
 
+pub mod auth;
 pub mod http;
 pub mod protocol;
 pub mod schema;

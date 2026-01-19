@@ -22,6 +22,8 @@
 //! ```
 
 mod broadcast;
+#[cfg(feature = "axum")]
+mod dns_protection;
 mod error;
 mod handler;
 mod legacy_sse;
@@ -41,5 +43,10 @@ pub use sse_writer::{SseResponseBuilder, SseWriter};
 #[cfg(feature = "tokio")]
 pub use broadcast::async_broadcast::SseBroadcaster;
 
+#[cfg(feature = "axum")]
+pub use dns_protection::{
+    host_header_validation, localhost_host_validation, DnsProtectionConfig, DnsProtectionLayer,
+    DnsProtectionService,
+};
 #[cfg(feature = "axum")]
 pub use legacy_sse::create_legacy_sse_router;

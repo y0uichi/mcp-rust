@@ -1,4 +1,5 @@
 //! Streamline stdio helpers for the client binary.
+pub mod auth;
 pub mod client;
 pub mod http;
 pub mod stdio;
@@ -19,3 +20,10 @@ pub use http::{
 
 #[cfg(feature = "websocket")]
 pub use websocket::{WebSocketClientError, WebSocketClientTransport};
+
+pub use auth::{
+    auth, discover_authorization_server_metadata, discover_protected_resource_metadata,
+    get_protected_resource_metadata_url, register_client, start_authorization, AuthOptions,
+    AuthResult, InMemoryOAuthClientProvider, InvalidationScope, OAuthClientError,
+    OAuthClientProvider,
+};
