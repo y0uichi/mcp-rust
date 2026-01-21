@@ -4,6 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-mcp_core = { path = "../../core" }
-mcp_client = { path = "../../client" }
+mcp_core = { path = "../../crates/mcp-core" }
+mcp_client = { path = "../../crates/mcp-client" }
 serde_json = "1.0"
