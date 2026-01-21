@@ -107,7 +107,7 @@ impl<P: OAuthServerProvider> Clone for OAuthRouterState<P> {
 
 /// Create OAuth metadata from options.
 pub fn create_oauth_metadata<P: OAuthServerProvider>(
-    provider: &P,
+    _provider: &P,
     options: &OAuthRouterOptions,
 ) -> OAuthMetadata {
     let base = options.base_url.as_ref().unwrap_or(&options.issuer_url);

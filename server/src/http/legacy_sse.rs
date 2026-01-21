@@ -46,6 +46,7 @@ impl Default for LegacySseConfig {
 /// Session state for legacy SSE transport.
 pub struct LegacySseSession {
     /// Session ID
+    #[allow(dead_code)]
     pub session_id: String,
     /// Sender for SSE messages
     #[cfg(feature = "tokio")]

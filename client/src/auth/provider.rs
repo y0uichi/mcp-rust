@@ -120,7 +120,7 @@ pub trait OAuthClientProvider: Send + Sync {
     /// By default, this validates that the resource matches the server URL.
     async fn validate_resource_url(
         &self,
-        server_url: &str,
+        _server_url: &str,
         resource: Option<&str>,
     ) -> Result<Option<String>, OAuthClientError> {
         // Default: use the resource from metadata if provided

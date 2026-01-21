@@ -92,12 +92,14 @@ pub mod async_reader {
     use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader as TokioBufReader};
 
     /// Async reader for SSE event streams.
+    #[allow(dead_code)]
     pub struct AsyncSseReader<R: AsyncRead + Unpin> {
         reader: TokioBufReader<R>,
         parser: SseParser,
         last_event_id: Option<String>,
     }
 
+    #[allow(dead_code)]
     impl<R: AsyncRead + Unpin> AsyncSseReader<R> {
         /// Create a new async SSE reader.
         pub fn new(reader: R) -> Self {

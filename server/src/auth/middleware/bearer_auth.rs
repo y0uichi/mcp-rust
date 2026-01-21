@@ -10,7 +10,6 @@ use std::task::{Context, Poll};
 
 use axum::body::Body;
 use axum::http::{header, Request, Response, StatusCode};
-use axum::response::IntoResponse;
 use tower::{Layer, Service};
 
 use mcp_core::auth::{AuthInfo, OAuthErrorResponse};
@@ -254,6 +253,7 @@ fn error_response(
 }
 
 /// Extension trait for extracting auth info from requests.
+#[allow(dead_code)]
 pub trait AuthInfoExt {
     /// Get the auth info from the request extensions.
     fn auth_info(&self) -> Option<&AuthInfo>;

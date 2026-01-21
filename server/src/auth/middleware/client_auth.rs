@@ -199,6 +199,7 @@ fn error_response(status: StatusCode, error: &str, description: &str) -> Respons
 }
 
 /// Extension trait for extracting client info from requests.
+#[allow(dead_code)]
 pub trait ClientInfoExt {
     /// Get the client info from the request extensions.
     fn client_info(&self) -> Option<&OAuthClientInformationFull>;
