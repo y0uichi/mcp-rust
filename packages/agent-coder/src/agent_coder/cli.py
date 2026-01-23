@@ -5,10 +5,12 @@ Provides both interactive mode and single-shot task execution.
 """
 
 import asyncio
+import gc
 import sys
 from typing import NoReturn
 
 import click
+from claude_agent_sdk._errors import CLIConnectionError
 
 from . import AgentCoder, AgentCoderConfig, __version__
 
@@ -90,10 +92,39 @@ def run(ctx, prompt, stream) -> None:
                 messages = await agent.run(prompt)
                 for message in messages:
                     _print_message(message)
+        except ExceptionGroup as eg:
+            # 过滤掉关闭期间的 CLIConnectionError (SDK 竞态条件 bug)
+            non_connection_errors = [
+                e for e in eg.exceptions
+                if not isinstance(e, CLIConnectionError)
+            ]
+            if non_connection_errors:
+                raise ExceptionGroup("errors", non_connection_errors)
+            # 仅有 CLIConnectionError 表示关闭时的竞态条件，可以忽略
         finally:
             await agent.close()
 
-    asyncio.run(_run())
+    # 使用自定义事件循环来正确清理子进程
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(_run())
+    finally:
+        # 清理待处理的任务和子进程
+        try:
+            # 取消所有待处理任务
+            pending = asyncio.all_tasks(loop)
+            for task in pending:
+                task.cancel()
+            if pending:
+                loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+            # 关闭异步生成器
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            # 关闭默认执行器
+            loop.run_until_complete(loop.shutdown_default_executor())
+        finally:
+            loop.close()
+        # 强制垃圾回收以在事件循环关闭前清理子进程
+        gc.collect()
 
 
 @cli.command()
