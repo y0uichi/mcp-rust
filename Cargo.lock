@@ -837,6 +837,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "github-mcp"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "base64",
+ "dirs",
+ "futures",
+ "mcp_core",
+ "mcp_server",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "toml",
+]
+
+[[package]]
 name = "gitlab-mcp-client"
 version = "0.1.0"
 dependencies = [

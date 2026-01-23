@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git rm:*)",
+      "Bash(cargo check:*)",
+      "Bash(pip install:*)"
+    ]
+  }
+}

@@ -14,6 +14,7 @@ members = [
     "examples/prompts-server",
     "examples/tasks-server",
     "examples/logging-server",
+    "mcp-impls/github-mcp/crates/mcp-server",
     "mcp-impls/gitlab-mcp/crates/mcp-server",
     "mcp-impls/gitlab-mcp/crates/mcp-client",
     "mcp-impls/gitlab-mcp/crates/api-doc-scraper",
@@ -70,3 +71,6 @@ governor = "0.6"
 
 # 进度条
 indicatif = "0.17"
+
+# 编码
+base64 = "0.22"
